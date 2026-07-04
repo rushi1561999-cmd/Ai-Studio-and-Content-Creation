@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #667eea;
+        }
+        .header h1 {
+            color: #667eea;
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            padding: 30px 0;
+        }
+        .content h2 {
+            color: #333;
+            font-size: 22px;
+        }
+        .content p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .alert-box p {
+            margin: 0;
+            color: #856404;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 0;
+            color: #0c5460;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .footer {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 New Login Detected</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Hello <span th:text="${fullName}">User</span>!</h2>
+            
+            <div class="alert-box">
+                <p><strong>We noticed a new login to your account.</strong></p>
+            </div>
+            
+            <p>Here are the details:</p>
+            
+            <div class="info-box">
+                <p><strong>Login Time:</strong> <span th:text="${loginTime}">-</span></p>
+                <p><strong>Platform:</strong> <span th:text="${appName}">AI Studio</span></p>
+            </div>
+            
+            <p>If this was you, you can safely ignore this email. Your account security is important to us, and we send these notifications to help keep your account protected.</p>
+            
+            <p style="text-align: center;">
+                <a th:href="${frontendUrl}" class="button">Go to Dashboard</a>
+            </p>
+            
+            <div class="alert-box">
+                <p><strong>If you did not initiate this login:</strong></p>
+                <p>Please secure your account immediately by changing your password in your settings.</p>
+            </div>
+            
+            <p>Best regards,<br>The <span th:text="${appName}">AI Studio</span> Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© <span th:text="${currentYear}">2024</span> <span th:text="${appName}">AI Studio</span>. All rights reserved.</p>
+            <p>This is an automated security notification. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

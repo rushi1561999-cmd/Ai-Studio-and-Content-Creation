@@ -1,0 +1,53 @@
+package com.example.demo.entity;
+
+import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "marketplace_posts")
+public class MarketplacePost {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    // The original prompt being shared
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prompt_id", nullable = false)
+    private Prompt prompt;
+
+    // The creator sharing it
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User author;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime publishedAt;
+
+    // --- Getters and Setters ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public Prompt getPrompt() { return prompt; }
+    public void setPrompt(Prompt prompt) { this.prompt = prompt; }
+
+    public User getAuthor() { return author; }
+    public void setAuthor(User author) { this.author = author; }
+
+    public LocalDateTime getPublishedAt() { return publishedAt; }
+    public void setPublishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; }
+}

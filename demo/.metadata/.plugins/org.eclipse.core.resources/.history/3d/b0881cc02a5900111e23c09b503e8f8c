@@ -1,0 +1,31 @@
+package com.example.demo.controller;
+
+import com.example.demo.service.AiService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/ai")
+@CrossOrigin(origins = "*")
+public class AiController {
+
+    private final AiService aiService;
+
+    public AiController(AiService aiService) {
+        this.aiService = aiService;
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<Map<String, String>> generateFromAi(@RequestBody Map<String, String> request) {
+        // Extract the prompt from the incoming JSON
+        String userPrompt = request.get("prompt");
+        
+        // Ask the AiService to get an answer from Gemini
+        String aiResponse = aiService.generateResponse(userPrompt);
+        
+        // Return it as a neat JSON object
+        return ResponseEntity.ok(Map.of("response", aiResponse));
+    }
+}

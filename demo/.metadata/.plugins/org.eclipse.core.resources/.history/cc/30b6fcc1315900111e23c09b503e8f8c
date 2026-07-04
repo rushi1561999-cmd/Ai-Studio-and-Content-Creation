@@ -1,0 +1,48 @@
+package com.example.demo.security;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // ADDED IMPORT
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    // ADDED jwtAuthFilter TO THE PARAMETERS HERE:
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
+        http
+            // Disable CSRF because we are using stateless JWTs
+            .csrf(AbstractHttpConfigurer::disable)
+            
+            // Set session management to stateless
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
+            // Configure route permissions
+            .authorizeHttpRequests(auth -> auth
+                // Allow public access to authentication endpoints (login, register) and webhooks
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/webhooks/**").permitAll()
+                
+                // Require authentication for everything else
+                .anyRequest().authenticated()
+            )
+            // ADDED THIS LINE: Tells Spring to run your custom JWT filter before the standard security checks
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // Bean for hashing passwords securely
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}

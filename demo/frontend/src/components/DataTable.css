@@ -1,0 +1,214 @@
+/* ========== DROPDOWN MENU ========== */
+
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.dropdown-trigger:hover {
+  border-color: var(--border-medium);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);
+}
+
+.dropdown-trigger.active {
+  border-color: var(--primary);
+  background: rgba(0, 217, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+  z-index: 100;
+  animation: slideInUp var(--transition-normal) ease;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: var(--spacing-md) var(--spacing-lg);
+  color: var(--text-primary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-fast);
+  border-left: 3px solid transparent;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background: rgba(0, 217, 255, 0.1);
+  border-left-color: var(--primary);
+  color: var(--primary);
+}
+
+.dropdown-item.active {
+  background: var(--primary-gradient);
+  color: var(--text-inverse);
+  border-left-color: var(--primary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: var(--spacing-sm) 0;
+}
+
+/* ========== DATA TABLE ========== */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.data-table thead {
+  background: rgba(0, 217, 255, 0.1);
+}
+
+.data-table th {
+  padding: var(--spacing-lg);
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.data-table td {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.data-table tbody tr {
+  transition: all var(--transition-fast);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(0, 217, 255, 0.05);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ========== TABLE CELLS ========== */
+
+.table-cell-code {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+}
+
+.table-cell-status {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-cell-status.success {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.table-cell-status.error {
+  background: rgba(255, 0, 85, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 0, 85, 0.2);
+}
+
+.table-cell-status.pending {
+  background: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+  border: 1px solid rgba(255, 165, 0, 0.2);
+}
+
+.table-cell-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.table-action-btn {
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.table-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(0, 217, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+}
+
+.table-action-btn.delete:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(255, 0, 85, 0.1);
+}
+
+/* ========== TABLE RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .data-table {
+    font-size: 0.85rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: var(--spacing-md);
+  }
+
+  .table-cell-code {
+    font-size: 0.75rem;
+  }
+
+  .table-action-btn {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
+}

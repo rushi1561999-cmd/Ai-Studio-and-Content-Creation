@@ -1,0 +1,11 @@
+package com.example.demo.repository;
+
+import com.example.demo.entity.GenerationJob;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface GenerationJobRepository extends JpaRepository<GenerationJob, String> {
+    // Spring Data JPA automatically provides built-in methods like save(), findById(), etc.
+    // No extra code needed here!
+}

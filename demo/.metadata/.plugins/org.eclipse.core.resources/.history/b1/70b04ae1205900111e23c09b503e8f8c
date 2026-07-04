@@ -1,0 +1,42 @@
+package com.example.demo.queue;
+
+import com.example.demo.config.RabbitMQConfig;
+import com.example.demo.dto.AiJobMessage;
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.entity.Workspace;
+import com.example.demo.repository.GenerationJobRepository;
+import com.example.demo.repository.WorkspaceRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AiJobProducer {
+
+    private final RabbitTemplate rabbitTemplate;
+    private final GenerationJobRepository jobRepository;
+    private final WorkspaceRepository workspaceRepository;
+
+    public AiJobProducer(RabbitTemplate rabbitTemplate, GenerationJobRepository jobRepository, WorkspaceRepository workspaceRepository) {
+        this.rabbitTemplate = rabbitTemplate;
+        this.jobRepository = jobRepository;
+        this.workspaceRepository = workspaceRepository;
+    }
+
+    public GenerationJob submitJob(String promptText, String workspaceId) {
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // 1. Create a PENDING job in the database
+        GenerationJob job = new GenerationJob();
+        job.setPromptText(promptText);
+        job.setStatus("PENDING");
+        job.setWorkspace(workspace);
+        GenerationJob savedJob = jobRepository.save(job);
+
+        // 2. Send the job ID to RabbitMQ
+        AiJobMessage message = new AiJobMessage(savedJob.getId(), promptText);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.ROUTING_KEY, message);
+
+        return savedJob;
+    }
+}

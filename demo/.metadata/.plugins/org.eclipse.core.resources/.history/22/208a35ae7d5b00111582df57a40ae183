@@ -1,0 +1,69 @@
+package com.example.demo.controller;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.entity.Wallet;
+import com.example.demo.queue.AiJobProducer;
+import com.example.demo.repository.GenerationJobRepository; 
+import com.example.demo.repository.WalletRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional; // Kept this for safety!
+import org.springframework.web.bind.annotation.*;
+
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/api/ai")
+public class AiController {
+
+    private final AiJobProducer aiJobProducer;
+    private final GenerationJobRepository jobRepository;
+    private final WalletRepository walletRepository;
+    
+    // FIXED: Properly initialized as a static constant with a value of 5
+    private static final int DEFAULT_FREE_CREDITS = 5;
+
+    public AiController(AiJobProducer aiJobProducer, GenerationJobRepository jobRepository, WalletRepository walletRepository) {
+        this.aiJobProducer = aiJobProducer;
+        this.jobRepository = jobRepository;
+        this.walletRepository = walletRepository;
+    }
+
+    @GetMapping("/wallet/{workspaceId}")
+    public ResponseEntity<Wallet> getWalletBalance(@PathVariable String workspaceId) {
+        // FIXED: Replaced duplicated logic with the helper method
+        Wallet wallet = getOrCreateWallet(workspaceId);
+        return ResponseEntity.ok(wallet);
+    }
+
+    @PostMapping("/generate")
+    @Transactional // FIXED: Added this back to protect against lost credits
+    public ResponseEntity<?> generateAiContent(
+            @RequestParam String promptText,
+            @RequestParam String workspaceId) {
+        
+        // FIXED: Replaced duplicated logic with the helper method
+        Wallet wallet = getOrCreateWallet(workspaceId);
+
+        // Block the request if they are out of credits
+        if (wallet.getCredits() <= 0) {
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                .body("Insufficient credits. Please upgrade your plan.");
+        }
+
+        // Deduct 1 credit and save the new balance
+        wallet.setCredits(wallet.getCredits() - 1);
+        walletRepository.save(wallet);
+        
+        // Proceed with Generation
+        GenerationJob job = aiJobProducer.submitJob(promptText, workspaceId);
+        return ResponseEntity.ok(job);
+    }
+
+    // Helper method to keep code DRY (Don't Repeat Yourself)
+    private Wallet getOrCreateWallet(String workspaceId) {
+        return walletRepository.findById(workspaceId).orElseGet(() -> {
+            Wallet newWallet = new Wallet(workspaceId, DEFAULT_FREE_CREDITS);
+            return walletRepository.save(newWallet);
+        });
+    }
+}

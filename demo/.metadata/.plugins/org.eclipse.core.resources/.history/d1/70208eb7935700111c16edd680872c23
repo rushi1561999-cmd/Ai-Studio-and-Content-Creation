@@ -1,0 +1,34 @@
+package controller;
+
+import dto.JobRequest;
+import entity.AiJob;
+import service.AiJobService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/jobs")
+@CrossOrigin(origins = "*") // Allows your React app running on a different port to connect
+public class AiJobController {
+
+    private final AiJobService aiJobService;
+
+    public AiJobController(AiJobService aiJobService) {
+        this.aiJobService = aiJobService;
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity generateContent(@RequestBody JobRequest request) {
+        // Hardcoded user for now, later this comes from your JWT Auth login
+        String userId = "user-123"; 
+
+        // 1. Save the pending job to MySQL
+        AiJob job = aiJobService.createJob(userId, request.getPrompt());
+
+        // 2. Start the background generation task
+        aiJobService.processJob(job.getId(), request.getPrompt());
+
+        // 3. Return the pending job back to React immediately!
+        return ResponseEntity.ok(job);
+    }
+}

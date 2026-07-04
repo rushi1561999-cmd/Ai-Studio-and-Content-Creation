@@ -1,0 +1,54 @@
+package com.example.demo.controller;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.queue.AiJobProducer;
+import com.example.demo.repository.GenerationJobRepository; 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List; // ADDED THIS IMPORT!
+import java.util.Optional;
+
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/api/ai")
+public class AiController {
+
+    private final AiJobProducer aiJobProducer;
+    private final GenerationJobRepository jobRepository;
+
+    public AiController(AiJobProducer aiJobProducer, GenerationJobRepository jobRepository) {
+        this.aiJobProducer = aiJobProducer;
+        this.jobRepository = jobRepository;
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<GenerationJob> generateAiContent(
+            @RequestParam String promptText,
+            @RequestParam String workspaceId) {
+        
+        GenerationJob job = aiJobProducer.submitJob(promptText, workspaceId);
+        return ResponseEntity.ok(job);
+    }
+
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<GenerationJob> getJob(@PathVariable String jobId) {
+        
+        Optional<GenerationJob> job = jobRepository.findById(jobId);
+        
+        if (job.isPresent()) {
+            return ResponseEntity.ok(job.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // NEW: Fetch generation history for the Dashboard
+    @GetMapping("/jobs/workspace/{workspaceId}")
+    public ResponseEntity<List<GenerationJob>> getWorkspaceHistory(@PathVariable String workspaceId) {
+        
+        List<GenerationJob> history = jobRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId);
+        
+        return ResponseEntity.ok(history);
+    }
+}

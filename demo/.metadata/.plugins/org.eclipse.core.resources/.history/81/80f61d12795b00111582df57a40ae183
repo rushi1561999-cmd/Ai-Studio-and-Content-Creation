@@ -1,0 +1,69 @@
+package com.example.demo.controller;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.entity.Wallet; // NEW IMPORT
+import com.example.demo.queue.AiJobProducer;
+import com.example.demo.repository.GenerationJobRepository; 
+import com.example.demo.repository.WalletRepository; // NEW IMPORT
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List; 
+import java.util.Optional;
+
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/api/ai")
+public class AiController {
+
+    private final AiJobProducer aiJobProducer;
+    private final GenerationJobRepository jobRepository;
+    private final WalletRepository walletRepository; // NEW: The Wallet Database
+
+    // Updated Constructor
+    public AiController(AiJobProducer aiJobProducer, GenerationJobRepository jobRepository, WalletRepository walletRepository) {
+        this.aiJobProducer = aiJobProducer;
+        this.jobRepository = jobRepository;
+        this.walletRepository = walletRepository;
+    }
+
+    // NEW: Endpoint for React to check the user's balance
+    @GetMapping("/wallet/{workspaceId}")
+    public ResponseEntity<Wallet> getWalletBalance(@PathVariable String workspaceId) {
+        // Find the wallet. If it doesn't exist, give them 5 free starter credits!
+        Wallet wallet = walletRepository.findById(workspaceId).orElseGet(() -> {
+            Wallet newWallet = new Wallet(workspaceId, 5);
+            return walletRepository.save(newWallet);
+        });
+        
+        return ResponseEntity.ok(wallet);
+    }
+
+    // UPDATED: The gatekeeper logic!
+    @PostMapping("/generate")
+    public ResponseEntity<?> generateAiContent(
+            @RequestParam String promptText,
+            @RequestParam String workspaceId) {
+        
+        // 1. Check their wallet
+        Wallet wallet = walletRepository.findById(workspaceId).orElseGet(() -> {
+            return walletRepository.save(new Wallet(workspaceId, 5));
+        });
+
+        // 2. Block the request if they are out of credits
+        if (wallet.getCredits() <= 0) {
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                .body("Insufficient credits. Please upgrade your plan.");
+        }
+
+        // 3. Deduct 1 credit and save the new balance
+        wallet.setCredits(wallet.getCredits() - 1);
+        walletRepository.save(wallet);
+        
+        // 4. Proceed with Generation
+        GenerationJob job = aiJobProducer.submitJob(promptText, workspaceId);
+        return ResponseEntity.ok(job);
+    }
+
+    // ... Keep your existing getJob and getWorkspaceHistory methods down here! ...

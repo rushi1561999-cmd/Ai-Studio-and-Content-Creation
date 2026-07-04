@@ -1,0 +1,18 @@
+spring.application.name=demo
+spring.datasource.url=jdbc:mysql://localhost:3306/cdac
+spring.datasource.username=root
+spring.datasource.password=Kimi065964@
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+replicate.api.token=your_replicate_token_here
+app.webhook.url=https://your-ngrok-or-production-url.com
+server.port=8081
+# Add this to the bottom of your properties file
+jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+ai.gemini.api.key= AIzaSyDF5-zz0cxyjoSHm5_QI_G1e5eMH0vpvK4
+
+ai.gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+# RabbitMQ Cloud Connection
+spring.rabbitmq.addresses=amqps://jkgmxcfk:SAdAKvYmzKN2vuchSwxCGIy5mRM5EQMS@warthog.lmq.cloudamqp.com/jkgmxcfk
+

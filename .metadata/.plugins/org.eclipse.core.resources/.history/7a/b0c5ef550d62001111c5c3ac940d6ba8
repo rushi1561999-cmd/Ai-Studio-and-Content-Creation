@@ -1,0 +1,176 @@
+package com.example.demo.service.admin;
+
+import com.example.demo.dto.AdminStatsResponse;
+import com.example.demo.dto.AdminUserResponse;
+import com.example.demo.dto.UpdateUserRoleRequest;
+import com.example.demo.entity.*;
+import com.example.demo.enums.PlatformRole;
+import com.example.demo.repository.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class AdminService {
+
+    private final UserRepository userRepository;
+    private final WorkspaceRepository workspaceRepository;
+    private final MarketplacePostRepository marketplacePostRepository;
+    private final GenerationJobRepository generationJobRepository;
+    private final PaymentRepository paymentRepository;
+    private final WalletRepository walletRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final AiModelRepository aiModelRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final CommentRepository commentRepository;
+    private final SavedPromptRepository savedPromptRepository;
+
+    public AdminService(
+            UserRepository userRepository,
+            WorkspaceRepository workspaceRepository,
+            MarketplacePostRepository marketplacePostRepository,
+            GenerationJobRepository generationJobRepository,
+            PaymentRepository paymentRepository,
+            WalletRepository walletRepository,
+            AuditLogRepository auditLogRepository,
+            AiModelRepository aiModelRepository,
+            PostLikeRepository postLikeRepository,
+            CommentRepository commentRepository,
+            SavedPromptRepository savedPromptRepository) {
+        this.userRepository = userRepository;
+        this.workspaceRepository = workspaceRepository;
+        this.marketplacePostRepository = marketplacePostRepository;
+        this.generationJobRepository = generationJobRepository;
+        this.paymentRepository = paymentRepository;
+        this.walletRepository = walletRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.aiModelRepository = aiModelRepository;
+        this.postLikeRepository = postLikeRepository;
+        this.commentRepository = commentRepository;
+        this.savedPromptRepository = savedPromptRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public AdminStatsResponse getStats() {
+        AdminStatsResponse stats = new AdminStatsResponse();
+        stats.setTotalUsers(userRepository.count());
+        stats.setTotalWorkspaces(workspaceRepository.count());
+        stats.setTotalMarketplacePosts(marketplacePostRepository.count());
+        stats.setTotalGenerationJobs(generationJobRepository.count());
+        stats.setTotalPayments(paymentRepository.count());
+        stats.setTotalCreditsInWallets(
+                walletRepository.findAll().stream().mapToLong(Wallet::getCredits).sum()
+        );
+        return stats;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminUserResponse> listUsers() {
+        return userRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(this::toAdminUser)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AdminUserResponse updateUserRole(String userId, UpdateUserRoleRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+
+        PlatformRole role;
+        try {
+            role = PlatformRole.valueOf(request.getRole().trim().toUpperCase());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role must be USER or ADMIN.");
+        }
+
+        user.setPlatformRole(role);
+        return toAdminUser(userRepository.save(user));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Workspace> listWorkspaces() {
+        return workspaceRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MarketplacePost> listMarketplacePosts() {
+        return marketplacePostRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Transactional
+    public void deleteMarketplacePost(String postId) {
+        if (!marketplacePostRepository.existsById(postId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found.");
+        }
+        postLikeRepository.deleteByPost_Id(postId);
+        commentRepository.deleteByPost_Id(postId);
+        savedPromptRepository.deleteByPost_Id(postId);
+        marketplacePostRepository.deleteById(postId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditLog> listAuditLogs() {
+        return auditLogRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(200)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Payment> listPayments() {
+        return paymentRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<AiModel> listAiModels() {
+        return aiModelRepository.findAll();
+    }
+
+    @Transactional
+    public AiModel toggleAiModel(String modelId, boolean active) {
+        AiModel model = aiModelRepository.findById(modelId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Model not found."));
+        model.setActive(active);
+        return aiModelRepository.save(model);
+    }
+
+    @Transactional
+    public Wallet addUserCredits(String userId, int amount, String description) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+
+        if (amount <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be positive.");
+        }
+
+        // Get user's workspace (assuming first workspace or create one)
+        Workspace workspace = workspaceRepository.findAll().stream()
+                .filter(ws -> workspaceMemberRepository.existsByUser_IdAndWorkspace_Id(user.getId(), ws.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User has no workspace."));
+
+        // Add credits to the workspace wallet
+        Wallet wallet = walletRepository.findById(workspace.getId())
+                .orElse(new Wallet(workspace.getId(), 0));
+        
+        wallet.setCredits(wallet.getCredits() + amount);
+        return walletRepository.save(wallet);
+    }
+
+    private AdminUserResponse toAdminUser(User user) {
+        AdminUserResponse dto = new AdminUserResponse();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setFullName(user.getFullName());
+        dto.setRole(user.getPlatformRole().name());
+        dto.setCreatedAt(user.getCreatedAt());
+        return dto;
+    }
+}

@@ -1,0 +1,46 @@
+package com.example.demo.controller;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.queue.AiJobProducer;
+// Make sure to import your actual repository package!
+import com.example.demo.repository.GenerationJobRepository; 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/ai")
+public class AiController {
+
+    private final AiJobProducer aiJobProducer;
+    private final GenerationJobRepository jobRepository; // Added this
+
+    // Updated constructor to inject the repository
+    public AiController(AiJobProducer aiJobProducer, GenerationJobRepository jobRepository) {
+        this.aiJobProducer = aiJobProducer;
+        this.jobRepository = jobRepository;
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<GenerationJob> generateAiContent(
+            @RequestParam String promptText,
+            @RequestParam String workspaceId) {
+        
+        GenerationJob job = aiJobProducer.submitJob(promptText, workspaceId);
+        return ResponseEntity.ok(job);
+    }
+
+    // NEW: The GET endpoint to fetch the completed result
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<GenerationJob> getJob(@PathVariable UUID jobId) {
+        Optional<GenerationJob> job = jobRepository.findById(jobId);
+        
+        if (job.isPresent()) {
+            return ResponseEntity.ok(job.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+}

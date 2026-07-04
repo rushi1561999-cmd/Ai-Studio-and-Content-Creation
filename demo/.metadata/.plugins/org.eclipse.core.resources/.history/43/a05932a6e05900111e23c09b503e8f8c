@@ -1,0 +1,27 @@
+package com.example.demo.controller;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.queue.AiJobProducer;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/ai")
+public class AiController {
+
+    private final AiJobProducer aiJobProducer;
+
+    public AiController(AiJobProducer aiJobProducer) {
+        this.aiJobProducer = aiJobProducer;
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<GenerationJob> generateAiContent(
+            @RequestParam String promptText,
+            @RequestParam String workspaceId) {
+        
+        // This instantly returns the PENDING job while RabbitMQ works in the background
+        GenerationJob job = aiJobProducer.submitJob(promptText, workspaceId);
+        return ResponseEntity.ok(job);
+    }
+}

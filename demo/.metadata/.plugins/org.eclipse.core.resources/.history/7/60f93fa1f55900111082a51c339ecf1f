@@ -1,0 +1,49 @@
+package com.example.demo.queue;
+
+import com.example.demo.config.RabbitMQConfig;
+import com.example.demo.service.ai.GeminiService;
+import com.example.demo.dto.AiJobMessage;
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.repository.GenerationJobRepository;
+import com.example.demo.service.AiService;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AiJobConsumer {
+
+    private final AiService aiService;
+    private final GenerationJobRepository jobRepository;
+
+    public AiJobConsumer(AiService aiService, GenerationJobRepository jobRepository) {
+        this.aiService = aiService;
+        this.jobRepository = jobRepository;
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE)
+    public void processAiJob(AiJobMessage message) {
+        // 1. Find the job and mark as PROCESSING
+        GenerationJob job = jobRepository.findById(message.getJobId()).orElse(null);
+        if (job == null) return;
+        
+        job.setStatus("PROCESSING");
+        jobRepository.save(job);
+
+        try {
+            // 2. Call Google Gemini (This takes time, but won't freeze the app!)
+            String aiResponse = aiService.generateResponse(message.getPromptText());
+
+            // 3. Save the result and mark as COMPLETED
+            job.setResult(aiResponse);
+            job.setStatus("COMPLETED");
+            jobRepository.save(job);
+            
+            System.out.println("✅ Background Job Completed for ID: " + job.getId());
+
+        } catch (Exception e) {
+            job.setStatus("FAILED");
+            job.setResult("Error: " + e.getMessage());
+            jobRepository.save(job);
+        }
+    }
+}

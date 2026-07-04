@@ -1,0 +1,117 @@
+/* ========== ADMIN WORKSPACES PAGE ========== */
+
+/* ========== HEADER ========== */
+.workspaces-admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2xl);
+  animation: slideInDown var(--transition-normal) ease;
+}
+
+.workspaces-admin-title {
+  font-size: 2rem;
+  font-weight: 900;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ========== FILTERS ========== */
+.workspace-filters {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.filter-select {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ========== WORKSPACES ADMIN TABLE ========== */
+.workspaces-admin-table-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  animation: slideInUp var(--transition-normal) ease;
+}
+
+.workspaces-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.workspaces-admin-table thead {
+  background: rgba(0, 217, 255, 0.1);
+}
+
+.workspaces-admin-table th,
+.workspaces-admin-table td {
+  padding: var(--spacing-lg);
+  text-align: left;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workspaces-admin-table th {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.workspaces-admin-table tbody tr:hover {
+  background: rgba(0, 217, 255, 0.05);
+}
+
+.workspaces-admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.workspace-stat-value {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .workspaces-admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .workspaces-admin-title {
+    font-size: 1.5rem;
+  }
+
+  .workspace-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .workspaces-admin-table {
+    font-size: 0.85rem;
+  }
+
+  .workspaces-admin-table th,
+  .workspaces-admin-table td {
+    padding: var(--spacing-md);
+  }
+}

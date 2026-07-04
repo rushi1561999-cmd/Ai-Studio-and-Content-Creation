@@ -1,0 +1,227 @@
+/* ========== TABS COMPONENT ========== */
+
+.tabs-container {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.tabs-list {
+  display: flex;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-bottom: 2px solid var(--border-light);
+  flex-wrap: wrap;
+}
+
+.tabs-trigger {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all var(--transition-fast);
+  position: relative;
+  border-bottom: 3px solid transparent;
+}
+
+.tabs-trigger:hover {
+  color: var(--text-primary);
+  background: rgba(0, 217, 255, 0.05);
+}
+
+.tabs-trigger.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tabs-trigger.active::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--primary-gradient);
+  animation: slideInLeft var(--transition-fast) ease;
+}
+
+.tabs-content {
+  padding: var(--spacing-xl) 0;
+  animation: fadeIn var(--transition-normal) ease;
+}
+
+/* ========== PROGRESS BAR ========== */
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: var(--spacing-md) 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal) ease;
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.progress-label-name {
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progress-label-value {
+  color: var(--primary);
+}
+
+/* ========== PAGINATION ========== */
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin: var(--spacing-2xl) 0;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  min-width: 44px;
+  text-align: center;
+}
+
+.pagination-button:hover:not(.disabled) {
+  border-color: var(--primary);
+  background: rgba(0, 217, 255, 0.1);
+  color: var(--primary);
+}
+
+.pagination-button.active {
+  background: var(--primary-gradient);
+  color: var(--text-inverse);
+  border-color: var(--primary);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+}
+
+.pagination-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  padding: 0.75rem 0.5rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* ========== BREADCRUMB ========== */
+
+.breadcrumb {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.breadcrumb-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  color: var(--text-muted);
+  margin: 0 var(--spacing-xs);
+}
+
+.breadcrumb-current {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* ========== RATING ========== */
+
+.rating {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.rating-star {
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-muted);
+}
+
+.rating-star:hover,
+.rating-star.filled {
+  color: var(--warning);
+  text-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+  transform: scale(1.15);
+}
+
+.rating-value {
+  margin-left: var(--spacing-sm);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .tabs-list {
+    overflow-x: auto;
+  }
+
+  .tabs-trigger {
+    padding: var(--spacing-md);
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .pagination {
+    gap: var(--spacing-xs);
+  }
+
+  .pagination-button {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 40px;
+  }
+}

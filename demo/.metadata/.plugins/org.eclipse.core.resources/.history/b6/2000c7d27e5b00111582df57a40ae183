@@ -1,0 +1,18 @@
+package com.example.demo.repository;
+
+import com.example.demo.entity.GenerationJob;
+import com.example.demo.entity.Wallet;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List; 
+
+@Repository
+//✅ CORRECT (Fixes the red line)
+public interface GenerationJobRepository extends JpaRepository<Wallet, String> {
+
+    
+    // Perfect! This returns a list of jobs, newest first.
+    List<GenerationJob> findByWorkspaceIdOrderByCreatedAtDesc(String workspaceId);
+    
+}
