@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "../components/AppLayout";
-import { useWorkspace } from "../context/WorkspaceContext";
+import { useWorkspace } from "../context/workspace-context";
 import api from "../api/axiosConfig";
 import "./Assets.css";
 
@@ -36,7 +36,30 @@ export default function Assets() {
   };
 
   useEffect(() => {
-    if (workspaceId) load();
+    if (!workspaceId) return undefined;
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) setLoading(true);
+        return Promise.all([
+          api.get(`/assets/workspace/${workspaceId}`),
+          api.get(`/assets/workspace/${workspaceId}/folders`),
+        ]);
+      })
+      .then(([assetsRes, foldersRes]) => {
+        if (cancelled) return;
+        setAssets(assetsRes.data);
+        setFolders(foldersRes.data);
+      })
+      .catch((err) => {
+        if (!cancelled) setMessage(err.message || "Failed to load assets.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
 
   const createFolder = async (e) => {
@@ -76,8 +99,8 @@ export default function Assets() {
 
   return (
     <AppLayout
-      title="Cloud Assets"
-      subtitle="Manage folders and file metadata for your workspace."
+      title="Asset library"
+      subtitle="Keep file metadata and folders organized in one workspace."
     >
       {message && (
         <div
@@ -104,7 +127,7 @@ export default function Assets() {
             {folders.length === 0 ? (
               <li className="muted">No folders yet</li>
             ) : (
-              folders.map((f) => <li key={f.id}>📁 {f.name}</li>)
+              folders.map((f) => <li key={f.id}>{f.name}</li>)
             )}
           </ul>
         </section>

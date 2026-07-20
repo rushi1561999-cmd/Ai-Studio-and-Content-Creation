@@ -1,18 +1,20 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
-import { setAuthSession, getHomePathForRole } from "../utils/auth";
+import AuthShell from "../components/AuthShell";
+import Icon from "../components/Icon";
+import { getHomePathForRole, setAuthSession } from "../utils/auth";
 import "./Login.css";
 
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
     setError("");
 
@@ -20,80 +22,64 @@ const Login = () => {
       const response = await api.post("/auth/login", { email, password });
       setAuthSession(response.data);
       navigate(getHomePathForRole(response.data.role));
-    } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Invalid email or password. Please try again.";
-      setError(message);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          "We could not sign you in. Check your email and password.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-background" />
-      <div className="login-card card animate-fadeIn">
-        <div className="login-header">
-          <div className="brand-logo gradient-bg animate-gradient pulse-animation">AI</div>
-          <h1 className="gradient-text">Welcome to AI Studio 🚀</h1>
-          <p>Sign in to your enterprise workspace ✨</p>
-        </div>
-
-        {error && <div className="error-message badge badge-danger">⚠️ {error}</div>}
-
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label>📧 Email Address</label>
+    <AuthShell
+      description="Enter your details to continue to your workspace."
+      eyebrow="Welcome back"
+      footer={<p>New to AI Studio? <Link to="/register">Create an account</Link></p>}
+      title="Sign in to continue"
+    >
+      {error && <div className="error-message" role="alert">{error}</div>}
+      <form className="auth-form" onSubmit={handleLogin}>
+        <label className="auth-field">
+          <span>Email address</span>
+          <span className="auth-input-wrap">
+            <Icon name="mail" size={18} />
             <input
+              autoComplete="email"
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              required
               type="email"
-              className="input"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
             />
-          </div>
+          </span>
+        </label>
 
-          <div className="form-group">
-            <label>🔒 Password</label>
+        <label className="auth-field">
+          <span className="auth-label-row">
+            <span>Password</span>
+            <Link to="/forgot-password">Forgot password?</Link>
+          </span>
+          <span className="auth-input-wrap">
+            <Icon name="lock" size={18} />
             <input
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              autoComplete="current-password"
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="Enter your password"
+              required
+              type="password"
+              value={password}
             />
-          </div>
+          </span>
+        </label>
 
-          <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? "Signing In… ⏳" : "Sign In 🔐"}
-          </button>
-        </form>
-
-        <div className="login-links">
-          <Link to="/forgot-password" className="link">
-            Forgot your password? 🔑
-          </Link>
-        </div>
-
-        <div className="login-hint card">
-          <p>Platform admin 👤:</p>
-          <code>admin@aistudio.com</code>
-          <code>Admin@123</code>
-        </div>
-
-        <div className="login-footer">
-          <p>Don&apos;t have an account? 🤔</p>
-          <Link to="/register" className="link">
-            Sign up here 📝
-          </Link>
-        </div>
-      </div>
-    </div>
+        <button className="btn btn-primary auth-submit" disabled={isLoading} type="submit">
+          {isLoading ? "Signing in…" : "Sign in"}
+          {!isLoading && <Icon name="arrowRight" size={17} />}
+        </button>
+      </form>
+    </AuthShell>
   );
-};
-
-export default Login;
+}

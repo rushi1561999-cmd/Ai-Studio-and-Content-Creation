@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
-import { useWorkspace } from "../context/WorkspaceContext";
+import { useWorkspace } from "../context/workspace-context";
 import AiGenerator from "../AiGenerator";
 import MediaPreview from "../components/MediaPreview";
+import Icon from "../components/Icon";
 import "./Dashboard.css";
 
-const TYPE_ICONS = { TEXT: "📝", IMAGE: "🖼️", VIDEO: "🎬", MIXED: "✨" };
-const TYPE_COLORS = {
-  TEXT: "var(--primary-gradient)",
-  IMAGE: "var(--accent-gradient)",
-  VIDEO: "var(--secondary-gradient)",
-  MIXED: "var(--warning-gradient)",
-};
-const AVATAR_EMOJIS = ["🎨", "🚀", "💡", "🌟", "🎪", "🎭", "🎬", "🎮", "🎲", "🎯"];
+const TYPE_LABELS = { TEXT: "Text", IMAGE: "Image", VIDEO: "Video", MIXED: "Mixed" };
 
 export default function Dashboard() {
   const location = useLocation();
@@ -38,9 +32,23 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (workspaceId) {
-      fetchHistory(workspaceId).catch(console.error);
-    }
+    if (!workspaceId) return undefined;
+    let cancelled = false;
+    Promise.all([
+      api.get(`/ai/jobs/workspace/${workspaceId}`),
+      api.get(`/ai/contents/workspace/${workspaceId}`),
+      api.get(`/prompts/workspace/${workspaceId}`),
+    ])
+      .then(([jobsRes, contentsRes, promptsRes]) => {
+        if (cancelled) return;
+        setHistory(jobsRes.data);
+        setContents(contentsRes.data);
+        setPrompts(promptsRes.data);
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
 
   const handlePublish = async (job) => {
@@ -63,7 +71,7 @@ export default function Dashboard() {
     }
   };
 
-  const useSavedPrompt = (content) => {
+  const applySavedPrompt = (content) => {
     window.dispatchEvent(
       new CustomEvent("ai-studio:set-prompt", { detail: content }),
     );
@@ -71,8 +79,8 @@ export default function Dashboard() {
 
   return (
     <AppLayout
-      title="Content Studio 🎨"
-      subtitle="Create text, images, videos, and rich combined content with AI ✨"
+      title="Create content"
+      subtitle="Turn a prompt into polished text, images, video, or a complete creative concept."
     >
       <div className="dashboard-grid">
         <div className="generator-column">
@@ -85,8 +93,8 @@ export default function Dashboard() {
             />
           ) : (
             <div className="card empty-state animate-fadeIn">
-              <div className="empty-icon bounce-animation">⏳</div>
-              <h3>Loading workspace… 🚀</h3>
+              <div className="empty-icon"><span className="spinner" /></div>
+              <h3>Preparing your workspace…</h3>
             </div>
           )}
         </div>
@@ -94,16 +102,19 @@ export default function Dashboard() {
         <aside className="history-column">
           {prompts.length > 0 && (
             <section className="sidebar-section animate-fadeIn">
-              <h2 className="gradient-text">Saved prompts 💾</h2>
+              <div className="section-heading">
+                <h2>Saved prompts</h2>
+                <span>{prompts.length}</span>
+              </div>
               <ul className="saved-prompt-list">
-                {prompts.slice(0, 5).map((p, index) => (
-                  <li key={p.id} style={{ animationDelay: `${index * 0.1}s` }}>
+                {prompts.slice(0, 5).map((p) => (
+                  <li key={p.id}>
                     <button
                       type="button"
                       className="prompt-card card hover-lift"
-                      onClick={() => useSavedPrompt(p.content)}
+                      onClick={() => applySavedPrompt(p.content)}
                     >
-                      <span className="prompt-emoji">{AVATAR_EMOJIS[index % AVATAR_EMOJIS.length]}</span>
+                      <span className="prompt-emoji"><Icon name="sparkles" size={16} /></span>
                       <div className="prompt-content">
                         <strong>{p.title}</strong>
                         <span>{p.content.substring(0, 60)}…</span>
@@ -115,30 +126,31 @@ export default function Dashboard() {
             </section>
           )}
 
-          <h2 className="gradient-text">Recent creations 🎬</h2>
+          <div className="section-heading history-heading">
+            <h2>Recent creations</h2>
+            <span>{history.length}</span>
+          </div>
           <div className="history-list">
             {history.length === 0 ? (
               <div className="card empty-state animate-fadeIn">
-                <div className="empty-icon pulse-animation">🎨</div>
-                <h3>No generations yet 🌟</h3>
-                <p>Pick a type above and start creating! ✨</p>
+                <div className="empty-icon"><Icon name="sparkles" size={22} /></div>
+                <h3>No creations yet</h3>
+                <p>Your latest generated content will appear here.</p>
               </div>
             ) : (
-              history.map((job, index) => (
+              history.map((job) => (
                 <article
                   key={job.id}
                   className="history-card card hover-lift"
-                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="history-card-top">
                     <span
                       className="content-type-pill"
-                      style={{ background: TYPE_COLORS[job.contentType] || TYPE_COLORS.TEXT }}
                     >
-                      {TYPE_ICONS[job.contentType] || "📝"} {job.contentType || "TEXT"}
+                      {TYPE_LABELS[job.contentType] || "Text"}
                     </span>
                     <span className={`status-badge status-${job.status.toLowerCase()}`}>
-                      {job.status === "COMPLETED" ? "✅" : job.status === "FAILED" ? "❌" : "⏳"} {job.status}
+                      {job.status}
                     </span>
                   </div>
                   <p className="history-prompt">{job.promptText}</p>
@@ -195,16 +207,15 @@ export default function Dashboard() {
 
           {contents.length > 0 && (
             <section className="sidebar-section content-gallery animate-fadeIn">
-              <h2 className="gradient-text">Media gallery</h2>
+              <div className="section-heading"><h2>Media gallery</h2></div>
               <div className="gallery-grid">
                 {contents
                   .filter((c) => c.mediaUrl || c.contentType === "IMAGE" || c.contentType === "VIDEO")
                   .slice(0, 6)
-                  .map((c, index) => (
+                  .map((c) => (
                     <div
                       key={c.id}
                       className="gallery-item card hover-lift"
-                      style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       {c.mediaUrl && c.contentType === "IMAGE" && (
                         <img src={c.mediaUrl} alt="" />

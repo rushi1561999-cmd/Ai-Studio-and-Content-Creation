@@ -1,8 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../api/axiosConfig";
 import { setAuthSession } from "../utils/auth";
-
-const WorkspaceContext = createContext(null);
+import { WorkspaceContext } from "./workspace-context";
 
 export function WorkspaceProvider({ children }) {
   const [workspaceId, setWorkspaceId] = useState(null);
@@ -87,12 +86,4 @@ export function WorkspaceProvider({ children }) {
   return (
     <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
   );
-}
-
-export function useWorkspace() {
-  const ctx = useContext(WorkspaceContext);
-  if (!ctx) {
-    throw new Error("useWorkspace must be used within WorkspaceProvider");
-  }
-  return ctx;
 }

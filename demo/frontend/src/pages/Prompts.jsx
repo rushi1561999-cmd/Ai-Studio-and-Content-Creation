@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "../components/AppLayout";
-import { useWorkspace } from "../context/WorkspaceContext";
+import { useWorkspace } from "../context/workspace-context";
 import api from "../api/axiosConfig";
 import "./Prompts.css";
 
@@ -31,7 +31,25 @@ export default function Prompts() {
   };
 
   useEffect(() => {
-    if (workspaceId) loadPrompts();
+    if (!workspaceId) return undefined;
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) setLoading(true);
+        return api.get(`/prompts/workspace/${workspaceId}`);
+      })
+      .then(({ data }) => {
+        if (!cancelled) setPrompts(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || "Failed to load prompts.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
 
   const handleCreate = async (e) => {
@@ -54,10 +72,10 @@ export default function Prompts() {
   return (
     <AppLayout
       title="Prompt Library"
-      subtitle="Save and organize prompts for your workspace."
+      subtitle="Build a reusable prompt system for faster, more consistent creative work."
       actions={
         <button type="button" className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ New prompt"}
+          {showForm ? "Cancel" : "New prompt"}
         </button>
       }
     >
@@ -103,7 +121,8 @@ export default function Prompts() {
         <p className="empty-state">Loading prompts…</p>
       ) : prompts.length === 0 ? (
         <div className="card empty-state">
-          <p>No prompts yet. Create one to reuse across generations.</p>
+          <h3>No saved prompts</h3>
+          <p>Create your first reusable prompt to speed up future generations.</p>
         </div>
       ) : (
         <div className="prompt-grid">

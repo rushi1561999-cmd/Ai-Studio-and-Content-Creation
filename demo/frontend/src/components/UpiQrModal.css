@@ -1,152 +1,111 @@
 .upi-qr-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(7px);
 }
 
 .upi-qr-modal-content {
-  background: var(--card-bg, #ffffff);
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
   position: relative;
-  animation: slideUp 0.3s ease;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: min(100%, 480px);
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  padding: clamp(22px, 4vw, 32px);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
 }
 
 .upi-qr-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  background: var(--bg-secondary, #f5f5f5);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.upi-qr-close-btn:hover {
-  background: var(--bg-hover, #e0e0e0);
-  transform: rotate(90deg);
+  padding: 0;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--bg-tertiary);
+  cursor: pointer;
 }
 
 .upi-qr-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  color: var(--text-primary, #1a1a1a);
-  text-align: center;
+  margin: 0 42px 7px;
+  font-size: 1.25rem;
+  font-weight: 730;
+  letter-spacing: -0.03em;
 }
 
 .upi-qr-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary, #666);
-  text-align: center;
-  margin: 0 0 24px 0;
-  line-height: 1.5;
+  margin: 0 auto 20px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.55;
 }
 
 .upi-qr-code-container {
-  display: flex;
-  justify-content: center;
-  margin: 24px 0;
-  padding: 20px;
-  background: var(--bg-secondary, #f5f5f5);
-  border-radius: 12px;
+  width: min(100%, 250px);
+  margin: 0 auto 18px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: #fff;
 }
 
 .upi-qr-image {
-  width: 250px;
-  height: 250px;
-  object-fit: contain;
-  border-radius: 8px;
+  width: 100%;
+  display: block;
 }
 
 .upi-qr-details {
-  background: var(--bg-secondary, #f5f5f5);
-  border-radius: 8px;
-  padding: 16px;
-  margin: 20px 0;
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-radius: 11px;
+  background: var(--bg-tertiary);
+  text-align: left;
 }
 
 .upi-qr-details p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: var(--text-primary, #1a1a1a);
-}
-
-.upi-qr-details strong {
-  color: var(--text-secondary, #666);
-  margin-right: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .upi-qr-instructions {
-  margin: 20px 0;
-  padding: 16px;
-  background: var(--accent-bg, rgba(139, 92, 246, 0.1));
-  border-radius: 8px;
-  border-left: 4px solid var(--accent-color, #8b5cf6);
+  margin: 18px 0;
+  text-align: left;
 }
 
 .upi-qr-instructions h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  color: var(--text-primary, #1a1a1a);
+  margin: 0 0 8px;
+  font-size: 0.8rem;
 }
 
 .upi-qr-instructions ol {
+  display: grid;
+  gap: 5px;
   margin: 0;
   padding-left: 20px;
-  font-size: 14px;
-  color: var(--text-secondary, #666);
-  line-height: 1.8;
-}
-
-.upi-qr-instructions li {
-  margin: 4px 0;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  line-height: 1.45;
 }
 
 .upi-qr-done-btn {
   width: 100%;
-  margin-top: 16px;
-  padding: 12px 24px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }

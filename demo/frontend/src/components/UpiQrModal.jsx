@@ -1,16 +1,16 @@
-import React from "react";
+import Icon from "./Icon";
 import "./UpiQrModal.css";
 
 export default function UpiQrModal({ show, onClose, qrData }) {
   if (!show || !qrData) return null;
 
   return (
-    <div className="upi-qr-modal-overlay" onClick={onClose}>
-      <div className="upi-qr-modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="upi-qr-close-btn" onClick={onClose}>
-          ✕
+    <div className="upi-qr-modal-overlay" onClick={onClose} role="presentation">
+      <div aria-modal="true" className="upi-qr-modal-content" onClick={(e) => e.stopPropagation()} role="dialog">
+        <button aria-label="Close UPI payment" className="upi-qr-close-btn" onClick={onClose} type="button">
+          <Icon name="close" size={18} />
         </button>
-        <h2 className="upi-qr-title">Pay with UPI 📱</h2>
+        <h2 className="upi-qr-title">Pay with UPI</h2>
         <p className="upi-qr-subtitle">
           Scan the QR code with your UPI app (GPay, PhonePe, Paytm, etc.)
         </p>
@@ -46,7 +46,7 @@ export default function UpiQrModal({ show, onClose, qrData }) {
           </ol>
         </div>
 
-        <button className="upi-qr-done-btn btn btn-primary" onClick={onClose}>
+        <button className="upi-qr-done-btn btn btn-primary" onClick={onClose} type="button">
           Done
         </button>
       </div>
