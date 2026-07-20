@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
@@ -84,7 +84,7 @@ export default function Settings() {
   };
 
   return (
-    <AppLayout title="Account settings" subtitle="Update your profile or delete your account.">
+    <AppLayout title="Account settings" subtitle="Manage your profile, sign-in credentials, and account access.">
       {error && <div className="alert alert-error">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 

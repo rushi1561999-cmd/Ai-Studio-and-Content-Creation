@@ -19,7 +19,17 @@ export default function AdminUsers() {
   };
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    api.get("/admin/users")
+      .then((res) => {
+        if (!cancelled) setUsers(res.data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const changeRole = async (userId, role) => {

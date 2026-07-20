@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
-import { setAuthSession, getHomePathForRole } from "../utils/auth";
+import AuthShell from "../components/AuthShell";
+import Icon from "../components/Icon";
+import { getHomePathForRole, setAuthSession } from "../utils/auth";
 import "./Login.css";
 
-const Register = () => {
+export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,8 +14,8 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
+  const handleRegister = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
     setError("");
 
@@ -23,84 +25,76 @@ const Register = () => {
         email,
         password,
       });
-
       setAuthSession(response.data);
       navigate(getHomePathForRole(response.data.role));
-    } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Registration failed. That email might already be in use.";
-      setError(message);
-      console.error("Registration error:", err);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          "We could not create your account. That email may already be registered.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-background" />
-      <div className="login-card card animate-fadeIn">
-        <div className="login-header">
-          <div className="brand-logo gradient-bg animate-gradient pulse-animation">AI</div>
-          <h1 className="gradient-text">Create an Account 🎉</h1>
-          <p>Join AI Studio to start generating content ✨</p>
-        </div>
-
-        {error && <div className="error-message badge badge-danger">⚠️ {error}</div>}
-
-        <form onSubmit={handleRegister}>
-          <div className="form-group">
-            <label>👤 Full Name</label>
+    <AuthShell
+      description="Set up your account and start creating in minutes."
+      eyebrow="Start creating"
+      footer={<p>Already have an account? <Link to="/login">Sign in</Link></p>}
+      title="Create your account"
+    >
+      {error && <div className="error-message" role="alert">{error}</div>}
+      <form className="auth-form" onSubmit={handleRegister}>
+        <label className="auth-field">
+          <span>Full name</span>
+          <span className="auth-input-wrap">
+            <Icon name="user" size={18} />
             <input
+              autoComplete="name"
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Your full name"
+              required
               type="text"
-              className="input"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Enter your full name"
             />
-          </div>
-
-          <div className="form-group">
-            <label>📧 Email Address</label>
+          </span>
+        </label>
+        <label className="auth-field">
+          <span>Email address</span>
+          <span className="auth-input-wrap">
+            <Icon name="mail" size={18} />
             <input
+              autoComplete="email"
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              required
               type="email"
-              className="input"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
             />
-          </div>
-
-          <div className="form-group">
-            <label>🔒 Password</label>
+          </span>
+        </label>
+        <label className="auth-field">
+          <span>Password</span>
+          <span className="auth-input-wrap">
+            <Icon name="lock" size={18} />
             <input
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={6}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="At least 6 characters"
               required
-              placeholder="Create a password"
+              type="password"
+              value={password}
             />
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? "Creating Account… ⏳" : "Sign Up 🚀"}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>Already have an account? 🤔</p>
-          <Link to="/login" className="link">
-            Log in here 🔐
-          </Link>
-        </div>
-      </div>
-    </div>
+          </span>
+        </label>
+        <button className="btn btn-primary auth-submit" disabled={isLoading} type="submit">
+          {isLoading ? "Creating account…" : "Create account"}
+          {!isLoading && <Icon name="arrowRight" size={17} />}
+        </button>
+      </form>
+    </AuthShell>
   );
-};
-
-export default Register;
+}

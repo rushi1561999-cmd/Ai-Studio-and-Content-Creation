@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon";
 import "./VoiceAssistant.css";
 
 const LANGUAGES = [
@@ -39,7 +40,7 @@ export default function VoiceAssistant({ onTranscript, onSpeak, disabled }) {
           try {
             tempRecognition.lang = lang.code;
             supported.push(lang);
-          } catch (e) {
+          } catch {
             console.warn(`Language ${lang.code} not supported for speech recognition`);
           }
         });
@@ -127,29 +128,6 @@ export default function VoiceAssistant({ onTranscript, onSpeak, disabled }) {
     }
   };
 
-  const speak = (text) => {
-    if (!synthesisRef.current) {
-      alert("Speech synthesis is not supported in your browser.");
-      return;
-    }
-
-    if (isListening) {
-      stopListening();
-    }
-
-    synthesisRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = selectedLanguage;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    synthesisRef.current.speak(utterance);
-  };
-
   const handleSpeakClick = () => {
     if (onSpeak) {
       onSpeak();
@@ -166,7 +144,7 @@ export default function VoiceAssistant({ onTranscript, onSpeak, disabled }) {
           disabled={disabled}
           title={isListening ? "Stop listening" : "Start voice input"}
         >
-          <span className="voice-icon">🎤</span>
+          <span className="voice-icon"><Icon name="mic" size={17} /></span>
           {isListening && <span className="voice-indicator" />}
         </button>
 
@@ -177,7 +155,7 @@ export default function VoiceAssistant({ onTranscript, onSpeak, disabled }) {
           disabled={disabled}
           title="Read aloud"
         >
-          <span className="voice-icon">🔊</span>
+          <span className="voice-icon"><Icon name="volume" size={17} /></span>
         </button>
 
         <div className="language-selector">
@@ -188,7 +166,7 @@ export default function VoiceAssistant({ onTranscript, onSpeak, disabled }) {
             disabled={disabled}
             title="Select language"
           >
-            🌐
+            <Icon name="globe" size={17} />
           </button>
 
           {showLanguageMenu && (

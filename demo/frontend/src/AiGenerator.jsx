@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import api from "./api/axiosConfig";
 import MediaPreview from "./components/MediaPreview";
 import VoiceAssistant from "./components/VoiceAssistant";
 import "./AiGenerator.css";
 
 const CONTENT_TYPES = [
-  { type: "TEXT", icon: "📝", label: "Text" },
-  { type: "IMAGE", icon: "🖼️", label: "Image" },
-  { type: "VIDEO", icon: "🎬", label: "Video" },
-  { type: "MIXED", icon: "✨", label: "Rich" },
+  { type: "TEXT", icon: "Aa", label: "Text" },
+  { type: "IMAGE", icon: "Im", label: "Image" },
+  { type: "VIDEO", icon: "Vi", label: "Video" },
+  { type: "MIXED", icon: "Mx", label: "Mixed" },
 ];
 
 export default function AiGenerator({
@@ -44,10 +44,6 @@ export default function AiGenerator({
       })
       .catch(() => setModels([]));
   }, [contentType]);
-
-  useEffect(() => {
-    if (initialPrompt) setPromptText(initialPrompt);
-  }, [initialPrompt]);
 
   useEffect(() => {
     const handler = (e) => setPromptText(e.detail || "");
@@ -135,10 +131,13 @@ export default function AiGenerator({
   }, [jobId, status, onGenerationSuccess, contentType]);
 
   return (
-    <div className="card ai-generator">
+    <section className="card ai-generator">
       <div className="ai-generator-header">
-        <h2>AI Content Studio</h2>
-        <span className="model-badge">{creditCost} credits</span>
+        <div>
+          <p>Generation workspace</p>
+          <h2>What will you create?</h2>
+        </div>
+        <span className="model-badge">{creditCost} {creditCost === 1 ? "credit" : "credits"}</span>
       </div>
 
       <div className="content-type-tabs">
@@ -150,7 +149,7 @@ export default function AiGenerator({
             onClick={() => setContentType(t.type)}
             disabled={status === "PENDING"}
           >
-            <span>{t.icon}</span>
+            <span aria-hidden="true">{t.icon}</span>
             {t.label}
           </button>
         ))}
@@ -259,6 +258,6 @@ export default function AiGenerator({
             />
           </div>
         )}
-    </div>
+    </section>
   );
 }

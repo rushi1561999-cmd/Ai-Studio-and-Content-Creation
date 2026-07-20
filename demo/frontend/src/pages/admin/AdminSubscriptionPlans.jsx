@@ -18,10 +18,6 @@ export default function AdminSubscriptionPlans() {
     active: true,
   });
 
-  useEffect(() => {
-    loadPlans();
-  }, []);
-
   const loadPlans = async () => {
     try {
       setLoading(true);
@@ -34,6 +30,25 @@ export default function AdminSubscriptionPlans() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/admin/subscription-plans")
+      .then((res) => {
+        if (cancelled) return;
+        setPlans(res.data);
+        setError("");
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.response?.data?.message || "Failed to load subscription plans.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreate = () => {
     setEditingPlan(null);
@@ -102,7 +117,10 @@ export default function AdminSubscriptionPlans() {
   };
 
   const formatPrice = (cents, currency) => {
-    return cents.toString();
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "USD",
+    }).format(Number(cents || 0) / 100);
   };
 
   return (
@@ -112,7 +130,7 @@ export default function AdminSubscriptionPlans() {
     >
       {error && (
         <div className="admin-error">
-          ⚠️ {error}
+          {error}
         </div>
       )}
 

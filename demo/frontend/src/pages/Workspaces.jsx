@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
+import Icon from "../components/Icon";
 import "./Workspaces.css";
 
 export default function Workspaces() {
@@ -27,7 +28,20 @@ export default function Workspaces() {
   };
 
   useEffect(() => {
-    loadWorkspaces();
+    let cancelled = false;
+    api.get("/workspaces")
+      .then(({ data }) => {
+        if (!cancelled) setWorkspaces(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || "Failed to load workspaces.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCreate = async (e) => {
@@ -59,11 +73,11 @@ export default function Workspaces() {
 
   return (
     <AppLayout
-      title="Workspaces 🏢"
-      subtitle="Manage your workspaces and switch between them."
+      title="Workspaces"
+      subtitle="Separate projects, teams, assets, and usage into focused spaces."
       actions={
         <button type="button" className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ New Workspace"}
+          {showForm ? "Cancel" : "New workspace"}
         </button>
       }
     >
@@ -89,36 +103,35 @@ export default function Workspaces() {
 
       {loading ? (
         <div className="card empty-state animate-fadeIn">
-          <div className="empty-icon pulse-animation">⏳</div>
+          <div className="empty-icon"><span className="spinner" /></div>
           <h3>Loading workspaces…</h3>
         </div>
       ) : workspaces.length === 0 ? (
         <div className="card empty-state animate-fadeIn">
-          <div className="empty-icon pulse-animation">🏢</div>
+          <div className="empty-icon"><Icon name="building" size={22} /></div>
           <h3>No workspaces yet</h3>
-          <p>Create your first workspace to get started!</p>
+          <p>Create your first workspace to start organizing content.</p>
         </div>
       ) : (
         <div className="workspace-grid">
-          {workspaces.map((ws, index) => (
+          {workspaces.map((ws) => (
             <article
               key={ws.id}
               className={`workspace-card card hover-lift ${activeWorkspaceId === ws.id ? "active" : ""}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="workspace-card-header">
-                <span className="workspace-icon">🏢</span>
+                <span className="workspace-icon"><Icon name="building" size={20} /></span>
                 {activeWorkspaceId === ws.id && <span className="active-badge badge badge-success">Active</span>}
               </div>
               <h3>{ws.name}</h3>
-              <p className="workspace-meta">Created: {formatDate(ws.createdAt)}</p>
+              <p className="workspace-meta">Created {formatDate(ws.createdAt)}</p>
               <div className="workspace-actions">
                 <button
                   type="button"
                   className={`btn ${activeWorkspaceId === ws.id ? "btn-success" : "btn-primary"}`}
                   onClick={() => handleSwitch(ws.id)}
                 >
-                  {activeWorkspaceId === ws.id ? "Current Workspace" : "Switch to Workspace"}
+                  {activeWorkspaceId === ws.id ? "Current workspace" : "Open workspace"}
                 </button>
               </div>
             </article>

@@ -1,26 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "../components/AppLayout";
-import { useWorkspace } from "../context/WorkspaceContext";
+import { useWorkspace } from "../context/workspace-context";
 import api from "../api/axiosConfig";
+import Icon from "../components/Icon";
 import "./Notifications.css";
-
-const NOTIFICATION_COLORS = {
-  BILLING: "var(--warning-gradient)",
-  GENERATION: "var(--primary-gradient)",
-  MARKETPLACE: "var(--accent-gradient)",
-  SYSTEM: "var(--dark-gradient)",
-  WORKSPACE: "var(--success-gradient)",
-};
-
-const NOTIFICATION_EMOJIS = {
-  BILLING: "💳",
-  GENERATION: "✨",
-  MARKETPLACE: "🛍️",
-  SYSTEM: "⚙️",
-  WORKSPACE: "🏢",
-};
-
-const AVATAR_EMOJIS = ["🎨", "🚀", "💡", "🌟", "🎪", "🎭", "🎬", "🎮", "🎲", "🎯"];
 
 export default function Notifications() {
   const { refreshUnread } = useWorkspace();
@@ -40,7 +23,18 @@ export default function Notifications() {
   };
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    api.get("/notifications")
+      .then(({ data }) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const markRead = async (id) => {
@@ -68,12 +62,12 @@ export default function Notifications() {
 
   return (
     <AppLayout
-      title="Notifications 🔔"
-      subtitle="Generation updates, billing, and workspace activity ✨"
+      title="Notifications"
+      subtitle="Generation updates, billing events, and workspace activity in one feed."
       actions={
         items.some((n) => !n.read) ? (
           <button type="button" className="btn btn-primary" onClick={markAllRead}>
-            ✅ Mark all read
+            Mark all as read
           </button>
         ) : null
       }
@@ -86,28 +80,22 @@ export default function Notifications() {
         </div>
       ) : items.length === 0 ? (
         <div className="card empty-state animate-fadeIn">
-          <div className="empty-icon pulse-animation">🎉</div>
-          <h3>You're all caught up! 🌟</h3>
-          <p>No notifications yet. Enjoy your day! ✨</p>
+          <div className="empty-icon"><Icon name="bell" size={22} /></div>
+          <h3>You&apos;re all caught up</h3>
+          <p>New workspace activity will appear here.</p>
         </div>
       ) : (
         <div className="notification-grid">
-          {items.map((n, index) => (
+          {items.map((n) => (
             <div
               key={n.id}
               className={`notification-card card ${n.read ? "read" : "unread"} hover-lift`}
-              style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="notification-header">
                 <div className="notification-avatar">
-                  {AVATAR_EMOJIS[index % AVATAR_EMOJIS.length]}
+                  <Icon name={n.type === "BILLING" ? "wallet" : n.type === "WORKSPACE" ? "building" : "bell"} size={18} />
                 </div>
-                <span
-                  className="type-badge"
-                  style={{ background: NOTIFICATION_COLORS[n.type] || NOTIFICATION_COLORS.SYSTEM }}
-                >
-                  {NOTIFICATION_EMOJIS[n.type] || "⚙️"} {n.type || "SYSTEM"}
-                </span>
+                <span className="type-badge">{n.type || "SYSTEM"}</span>
                 <time className="notification-time">{formatDate(n.createdAt)}</time>
               </div>
               <h3 className="notification-title">{n.title}</h3>
@@ -118,7 +106,7 @@ export default function Notifications() {
                   className="btn btn-primary btn-sm"
                   onClick={() => markRead(n.id)}
                 >
-                  ✅ Mark as read
+                  Mark as read
                 </button>
               )}
             </div>

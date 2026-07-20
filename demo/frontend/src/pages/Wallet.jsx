@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
-import { useWorkspace } from "../context/WorkspaceContext";
+import Icon from "../components/Icon";
+import { useWorkspace } from "../context/workspace-context";
 import "./Wallet.css";
 import UpiQrModal from "../components/UpiQrModal";
 
@@ -12,21 +13,21 @@ const PACKS = {
     credits: 100,
     price: "90",
     gradient: "var(--primary-gradient)",
-    emoji: "🌱",
+    emoji: "S",
   },
   Professional: {
     pack: "professional",
     credits: 500,
     price: "299",
     gradient: "var(--accent-gradient)",
-    emoji: "⭐",
+    emoji: "P",
   },
   Enterprise: {
     pack: "enterprise",
     credits: 1000,
     price: "799",
     gradient: "var(--success-gradient)",
-    emoji: "🚀",
+    emoji: "E",
   },
 };
 
@@ -96,14 +97,17 @@ export default function Wallet() {
 
   useEffect(() => {
     const payment = searchParams.get("payment");
-    if (payment === "success") {
-      setPaymentNotice("Payment successful! Credits have been added.");
-      refreshWallet();
+    if (!payment) return undefined;
+    const timer = window.setTimeout(() => {
+      if (payment === "success") {
+        setPaymentNotice("Payment successful! Credits have been added.");
+        refreshWallet();
+      } else if (payment === "cancelled") {
+        setPaymentNotice("Payment cancelled.");
+      }
       setSearchParams({});
-    } else if (payment === "cancelled") {
-      setPaymentNotice("Payment cancelled.");
-      setSearchParams({});
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [searchParams, setSearchParams, refreshWallet]);
 
   const handlePurchase = async (tierName) => {
@@ -142,7 +146,7 @@ export default function Wallet() {
         const { data } = await api.post(
           `/stripe/checkout?workspaceId=${workspaceId}&pack=${tier.pack}`,
         );
-        window.location.href = data.checkoutUrl;
+        window.location.assign(data.checkoutUrl);
         setSelectedPack(null); // Clear selection after purchase
         return;
       }
@@ -183,7 +187,7 @@ export default function Wallet() {
       );
     } catch (error) {
       console.error("UPI QR generation error:", error);
-      setPaymentNotice("❌ Failed to generate UPI QR. Please try again.");
+      setPaymentNotice("Failed to generate a UPI QR. Please try again.");
     } finally {
       setPurchasing(false);
     }
@@ -202,7 +206,7 @@ export default function Wallet() {
       if (!window.Razorpay) {
         console.error("Razorpay SDK not loaded");
         setPaymentNotice(
-          "❌ Razorpay SDK not loaded. Please refresh the page.",
+          "Razorpay could not load. Please refresh the page.",
         );
         setPurchasing(false);
         return;
@@ -242,13 +246,13 @@ export default function Wallet() {
             });
 
             setPaymentNotice(
-              `✅ Payment successful! ${tier.credits} credits added.`,
+              `Payment successful! ${tier.credits} credits added.`,
             );
             await refreshWallet();
             setPurchasing(false);
           } catch (err) {
             setPaymentNotice(
-              "❌ Payment verification failed. Please contact support.",
+              "Payment verification failed. Please contact support.",
             );
             console.error("Verification error:", err);
             setPurchasing(false);
@@ -257,7 +261,7 @@ export default function Wallet() {
         modal: {
           ondismiss: () => {
             console.log("Payment modal dismissed");
-            setPaymentNotice("❌ Payment cancelled.");
+            setPaymentNotice("Payment cancelled.");
             setPurchasing(false);
           },
         },
@@ -270,7 +274,7 @@ export default function Wallet() {
     } catch (error) {
       console.error("Razorpay checkout error:", error);
       setPaymentNotice(
-        "❌ Failed to initiate payment. Please try again. Error: " +
+        "Failed to initiate payment. Please try again. Error: " +
           (error.response?.data?.message || error.message),
       );
       setPurchasing(false);
@@ -294,7 +298,7 @@ export default function Wallet() {
         );
         setSubscription(subRes.data);
         setSelectedPlan(null);
-        setPaymentNotice("Subscription activated successfully! ✨");
+        setPaymentNotice("Subscription activated successfully.");
         return;
       }
 
@@ -302,7 +306,7 @@ export default function Wallet() {
         const { data } = await api.post(
           `/stripe/subscribe?workspaceId=${workspaceId}&planId=${planId}`,
         );
-        window.location.href = data.checkoutUrl;
+        window.location.assign(data.checkoutUrl);
         return;
       }
 
@@ -312,10 +316,10 @@ export default function Wallet() {
       );
       setSubscription(subRes.data);
       setSelectedPlan(null);
-      setPaymentNotice("Subscription activated successfully! ✨");
+      setPaymentNotice("Subscription activated successfully.");
     } catch (error) {
       setPaymentNotice(
-        error.response?.data?.message || "Subscription failed. ❌",
+        error.response?.data?.message || "Subscription failed.",
       );
     } finally {
       setSubscribing(false);
@@ -333,40 +337,39 @@ export default function Wallet() {
         `/billing/workspace/${workspaceId}/subscription/${subscription.id}/cancel`,
       );
       setSubscription(null);
-      setPaymentNotice("Subscription cancelled. 😔");
+      setPaymentNotice("Subscription cancelled.");
     } catch (error) {
       setPaymentNotice(
-        error.response?.data?.message || "Cancellation failed. ❌",
+        error.response?.data?.message || "Cancellation failed.",
       );
     }
   };
 
   return (
     <AppLayout
-      title="Billing & Wallet 💳"
+      title="Billing and usage"
       subtitle={
         razorpayEnabled
-          ? "Purchase credits securely with Razorpay 💎"
+          ? "Manage credits, plans, and secure payments with Razorpay."
           : stripeEnabled
-            ? "Purchase credits securely with Stripe ✨"
-            : "No payment gateway configured — dev top-up only 🔧"
+            ? "Manage credits, plans, and secure payments with Stripe."
+            : "Review credit usage and use development top-ups while payments are unconfigured."
       }
     >
       {paymentNotice && (
         <div
           className={`alert ${paymentNotice.includes("successful") || paymentNotice.includes("Added") ? "alert-success" : "alert-warning"}`}
         >
-          {paymentNotice.includes("successful") ? "✅ " : "⚠️ "}
           {paymentNotice}
         </div>
       )}
 
       <div className="balance-banner card animate-fadeIn">
-        <div className="balance-icon gradient-bg animate-gradient pulse-animation">
-          ⚡
+        <div className="balance-icon gradient-bg">
+          <Icon name="bolt" size={24} />
         </div>
         <div className="balance-info">
-          <h3>Current balance 💰</h3>
+          <h3>Available balance</h3>
           <h1
             className={
               credits <= 0 ? "zero-balance gradient-text" : "gradient-text"
@@ -376,22 +379,22 @@ export default function Wallet() {
           </h1>
           <p>
             {credits <= 0
-              ? "Out of credits — purchase a pack below. 🛒"
-              : "Available for AI generations (1 credit per run). 🎨"}
+              ? "You are out of credits. Choose a pack below to continue."
+              : "Ready to use across supported AI generation models."}
           </p>
         </div>
       </div>
 
       {plans.length > 0 && (
         <section className="billing-section animate-fadeIn">
-          <h2 className="gradient-text">📅 Monthly subscription plans</h2>
+          <h2>Monthly plans</h2>
           {subscription ? (
             <div className="subscription-active card">
               <div className="subscription-content">
-                <h4>✅ Active subscription</h4>
+                <h4>Active subscription</h4>
                 <p className="subscription-plan">{subscription.planName}</p>
                 <p className="subscription-details">
-                  ⚡ {subscription.monthlyCredits} credits/month •{" "}
+                  {subscription.monthlyCredits} credits/month ·{" "}
                   {subscription.status}
                 </p>
                 <p className="subscription-date">
@@ -407,11 +410,10 @@ export default function Wallet() {
             </div>
           ) : (
             <div className="plans-selection">
-              {plans.map((plan, index) => (
+              {plans.map((plan) => (
                 <div
                   key={plan.id}
                   className={`plan-card card ${selectedPlan?.id === plan.id ? "selected" : ""}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
                   onClick={() => setSelectedPlan(plan)}
                 >
                   <div className="plan-header">
@@ -424,12 +426,12 @@ export default function Wallet() {
                   </div>
                   <p className="plan-price">{plan.priceCents}/mo</p>
                   <p className="plan-credits">
-                    ⚡ {plan.monthlyCredits} credits monthly
+                    {plan.monthlyCredits} credits monthly
                   </p>
                   <ul className="plan-features">
-                    <li>📁 Workspace storage</li>
-                    <li>🛍️ Marketplace access</li>
-                    <li>🎨 AI generations</li>
+                    <li>Workspace storage</li>
+                    <li>Marketplace access</li>
+                    <li>AI generations</li>
                   </ul>
                 </div>
               ))}
@@ -445,25 +447,24 @@ export default function Wallet() {
               >
                 {subscribing
                   ? "Processing..."
-                  : `Subscribe to ${selectedPlan.name} 💳`}
+                  : `Subscribe to ${selectedPlan.name}`}
               </button>
             </div>
           )}
         </section>
       )}
 
-      <h2 className="section-title gradient-text">Purchase credit packs 🛍️</h2>
+      <h2 className="section-title">One-time credit packs</h2>
       <div className="pricing-grid">
-        {Object.entries(PACKS).map(([name, tier], index) => (
+        {Object.entries(PACKS).map(([name, tier]) => (
           <div
             key={name}
             className={`pricing-card card hover-lift ${name === "Professional" ? "popular" : ""} ${selectedPack === name ? "selected" : ""}`}
-            style={{ animationDelay: `${index * 0.1}s` }}
             onClick={() => setSelectedPack(name)}
           >
             {name === "Professional" && (
               <div className="popular-badge badge badge-warning">
-                ⭐ Popular
+                Popular
               </div>
             )}
             <div
@@ -473,14 +474,14 @@ export default function Wallet() {
               <div className="pack-emoji">{tier.emoji}</div>
               <h3>{name}</h3>
             </div>
-            <h2 className="gradient-text">
-              {tier.price}
-              <span>/pack 💎</span>
+            <h2>
+              ₹{tier.price}
+              <span>/pack</span>
             </h2>
             <ul>
-              <li>⚡ {tier.credits} AI generations</li>
-              <li>🛍️ Marketplace access</li>
-              <li>📁 Workspace storage</li>
+              <li>{tier.credits} generation credits</li>
+              <li>Marketplace access</li>
+              <li>Workspace storage</li>
             </ul>
             <button
               type="button"
@@ -492,10 +493,10 @@ export default function Wallet() {
               }}
             >
               {razorpayEnabled
-                ? "Pay with Razorpay �"
+                ? "Pay with Razorpay"
                 : stripeEnabled
-                  ? "Pay with Stripe �"
-                  : `Add ${tier.credits} credits ⚡`}
+                  ? "Pay with Stripe"
+                  : `Add ${tier.credits} credits`}
             </button>
             {upiEnabled && (
               <button
@@ -506,9 +507,8 @@ export default function Wallet() {
                   e.stopPropagation();
                   handleUpiPayment(name);
                 }}
-                style={{ marginTop: "10px" }}
               >
-                Pay with UPI 📱
+                Pay with UPI
               </button>
             )}
           </div>
@@ -524,12 +524,11 @@ export default function Wallet() {
           >
             {purchasing
               ? "Processing..."
-              : `Purchase ${PACKS[selectedPack].credits} credits for ${PACKS[selectedPack].price} 💎`}
+              : `Purchase ${PACKS[selectedPack].credits} credits for ₹${PACKS[selectedPack].price}`}
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => setSelectedPack(null)}
-            style={{ marginLeft: "10px" }}
           >
             Cancel
           </button>
@@ -538,10 +537,10 @@ export default function Wallet() {
 
       {(stripeEnabled || razorpayEnabled) && (
         <section className="card animate-fadeIn payment-methods-section">
-          <h3 className="gradient-text">💳 Payment methods</h3>
+          <h3>Payment methods</h3>
           {razorpayEnabled && !stripeEnabled ? (
             <div className="empty-state">
-              <p>💎 Razorpay is configured and ready for payments.</p>
+              <p>Razorpay is configured and ready for payments.</p>
               <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
                 Click "Pay with Razorpay" to purchase credits instantly.
               </p>
@@ -557,7 +556,7 @@ export default function Wallet() {
               </button>
               {showPaymentForm && (
                 <div className="payment-form-placeholder">
-                  <p>💳 Stripe payment form will appear here</p>
+                  <p>Stripe payment form will appear here.</p>
                   <p
                     style={{
                       fontSize: "0.85rem",
@@ -603,7 +602,7 @@ export default function Wallet() {
 
       <div className="billing-tables">
         <section className="card animate-fadeIn">
-          <h3 className="gradient-text">Credit transactions</h3>
+          <h3>Credit transactions</h3>
           {transactions.length === 0 ? (
             <div className="empty-state">
               <p>No transactions yet.</p>
@@ -634,18 +633,13 @@ export default function Wallet() {
                     <td>{formatDate(tx.createdAt)}</td>
                   </tr>
                 ))}
-                <UpiQrModal
-                  show={showUpiQr}
-                  onClose={() => setShowUpiQr(false)}
-                  qrData={upiQrData}
-                />
               </tbody>
             </table>
           )}
         </section>
 
         <section className="card animate-fadeIn">
-          <h3 className="gradient-text">Payments</h3>
+          <h3>Payments</h3>
           {payments.length === 0 ? (
             <div className="empty-state">
               <p>No payments recorded.</p>
@@ -682,6 +676,11 @@ export default function Wallet() {
           )}
         </section>
       </div>
+      <UpiQrModal
+        show={showUpiQr}
+        onClose={() => setShowUpiQr(false)}
+        qrData={upiQrData}
+      />
     </AppLayout>
   );
 }
