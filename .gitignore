@@ -1,0 +1,6 @@
+.metadata/
+**/.metadata/
+.idea/
+.vscode/
+*.log
+.DS_Store

@@ -26,9 +26,9 @@ export default function Dashboard() {
       api.get(`/ai/contents/workspace/${wsId}`),
       api.get(`/prompts/workspace/${wsId}`),
     ]);
-    setHistory(jobsRes.data);
-    setContents(contentsRes.data);
-    setPrompts(promptsRes.data);
+    setHistory(jobsRes.data.content ?? jobsRes.data);
+    setContents(contentsRes.data.content ?? contentsRes.data);
+    setPrompts(promptsRes.data.content ?? promptsRes.data);
   };
 
   useEffect(() => {
@@ -41,9 +41,9 @@ export default function Dashboard() {
     ])
       .then(([jobsRes, contentsRes, promptsRes]) => {
         if (cancelled) return;
-        setHistory(jobsRes.data);
-        setContents(contentsRes.data);
-        setPrompts(promptsRes.data);
+        setHistory(jobsRes.data.content ?? jobsRes.data);
+        setContents(contentsRes.data.content ?? contentsRes.data);
+        setPrompts(promptsRes.data.content ?? promptsRes.data);
       })
       .catch(console.error);
     return () => {

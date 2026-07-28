@@ -42,7 +42,7 @@ public class EmailService {
         this.templateEngine = templateEngine;
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendRegistrationEmail(String toEmail, String fullName) {
         if (!emailEnabled) {
             logger.warning("[Email] Email service is disabled. Skipping registration email to: " + toEmail);
@@ -79,7 +79,7 @@ public class EmailService {
         }
     }
 
-    @Async
+    @Async("emailExecutor")
     public void sendLoginNotification(String toEmail, String fullName, String loginTime) {
         if (!emailEnabled) {
             logger.warning("[Email] Email service is disabled. Skipping login notification to: " + toEmail);

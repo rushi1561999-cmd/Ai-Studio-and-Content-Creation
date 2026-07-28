@@ -12,8 +12,9 @@ import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.WorkspaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @Service
 public class PromptService {
 
@@ -21,17 +22,21 @@ public class PromptService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceAccessService workspaceAccessService;
 
     public PromptService(PromptRepository promptRepository, CategoryRepository categoryRepository,
-                         UserRepository userRepository, WorkspaceRepository workspaceRepository) {
+                         UserRepository userRepository, WorkspaceRepository workspaceRepository,
+                         WorkspaceAccessService workspaceAccessService) {
         this.promptRepository = promptRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.workspaceRepository = workspaceRepository;
+        this.workspaceAccessService = workspaceAccessService;
     }
 
     @Transactional
     public PromptResponse createPrompt(PromptRequest request, String userEmail) {
+        workspaceAccessService.requireWorkspaceAccess(request.getWorkspaceId());
         // 1. Find User
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -69,20 +74,16 @@ public class PromptService {
     }
   
 
-    // ... your existing code ...
-
-    public List<PromptResponse> getPromptsByWorkspace(String workspaceId) {
-        // Fetch all prompts that belong to this specific workspace
-        List<Prompt> prompts = promptRepository.findByWorkspaceId(workspaceId);
-        
-        // Convert the database entities into clean JSON DTOs
-        return prompts.stream().map(prompt -> {
+    @Transactional(readOnly = true)
+    public Page<PromptResponse> getPromptsByWorkspace(String workspaceId, Pageable pageable) {
+        workspaceAccessService.requireWorkspaceAccess(workspaceId);
+        return promptRepository.findByWorkspace_Id(workspaceId, pageable).map(prompt -> {
             PromptResponse response = new PromptResponse();
             response.setId(prompt.getId());
             response.setTitle(prompt.getTitle());
             response.setContent(prompt.getContent());
             response.setCategoryName(prompt.getCategory().getName());
             return response;
-        }).collect(Collectors.toList());
+        });
     }
 }

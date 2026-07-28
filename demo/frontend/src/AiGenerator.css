@@ -268,3 +268,10 @@
     min-height: 150px;
   }
 }
+.prompt-character-count {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  text-align: right;
+}

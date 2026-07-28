@@ -1,27 +1,25 @@
 package com.example.demo.queue;
 
-import com.example.demo.config.RabbitMQConfig;
 import com.example.demo.dto.AiJobMessage;
 import com.example.demo.entity.GenerationJob;
 import com.example.demo.enums.ContentType;
 import com.example.demo.repository.GenerationJobRepository;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AiJobProducer {
 
-    private final RabbitTemplate rabbitTemplate;
     private final GenerationJobRepository jobRepository;
+    private final OutboxService outboxService;
     private final boolean rabbitMqEnabled;
 
     public AiJobProducer(
-            RabbitTemplate rabbitTemplate,
             GenerationJobRepository jobRepository,
+            OutboxService outboxService,
             @Value("${ai.processing.rabbitmq:false}") boolean rabbitMqEnabled) {
-        this.rabbitTemplate = rabbitTemplate;
         this.jobRepository = jobRepository;
+        this.outboxService = outboxService;
         this.rabbitMqEnabled = rabbitMqEnabled;
     }
 
@@ -42,7 +40,7 @@ public class AiJobProducer {
                     contentType.name(),
                     modelKey
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.ROUTING_KEY, message);
+            outboxService.enqueueGeneration(message, contentType);
         }
 
         return savedJob;
