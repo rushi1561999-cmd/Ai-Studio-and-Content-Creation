@@ -48,17 +48,14 @@ Your CADC project has been updated with **3 major improvements**:
 2. **User Login** → Login notification email sent asynchronously
 3. **Error Handling** → Detailed logs if something goes wrong
 
-### Email Configuration (Already Set):
+### Email Configuration
 
 ```properties
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=harshaldhande1561999@gmail.com
-spring.mail.password=abql vgqm slja ghmf
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
-app.email.enabled=true
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
+app.email.enabled=${APP_EMAIL_ENABLED:false}
 ```
 
 ### Troubleshooting Email Issues:
@@ -69,15 +66,16 @@ If emails still aren't working:
    - Go to https://myaccount.google.com/apppasswords
    - Select "Mail" and "Windows Computer" (or your platform)
    - Generate a new app password
-   - Update `spring.mail.password` in `application-local.properties`
+   - Store it in the `MAIL_PASSWORD` environment variable or an untracked
+     `application-local.properties` file.
 
-2. **Enable "Less Secure Apps"** (if using regular Gmail password):
-   - Go to https://myaccount.google.com/lesssecureapps
-   - Enable "Allow less secure apps"
-
-3. **Verify Configuration**:
+2. **Verify Configuration**:
    - Check that `app.email.enabled=true` in application.properties
    - Review application logs for any email service errors
+
+Never commit email passwords, payment credentials, JWT secrets, or provider API
+keys. Rotate any credential that was previously committed because removing it
+from the latest revision does not remove it from Git history.
 
 ---
 

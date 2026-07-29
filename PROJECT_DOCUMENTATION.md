@@ -30,7 +30,7 @@ AI Studio is a comprehensive AI-powered content generation platform that enables
 
 #### Architecture Pattern
 The application follows a layered architecture:
-- **Controller Layer**: REST API endpoints (13 controllers)
+- **Controller Layer**: REST API endpoints organized by product domain
 - **Service Layer**: Business logic (25+ services)
 - **Repository Layer**: Data access (31 repositories)
 - **Entity Layer**: Database models (32 entities)
@@ -71,8 +71,8 @@ The application follows a layered architecture:
 - ✅ Normalized database structure
 
 #### API Endpoints
-- ✅ 13 REST controllers
-- ✅ 50+ API endpoints
+- ✅ Domain-focused REST controllers
+- ✅ Comprehensive API coverage
 - ✅ Comprehensive request/response DTOs
 - ✅ Proper error handling and validation
 
@@ -281,7 +281,7 @@ users (1) ←→ (N) followers ←→ (1) users
 
 ### API Overview
 
-The application exposes 50+ RESTful API endpoints organized into 13 controllers. All APIs use JWT authentication except for public endpoints (register, login, password reset, webhooks).
+The application exposes RESTful API endpoints organized by product domain. All APIs use JWT authentication except for explicitly public endpoints such as registration, login, password reset, and verified payment webhooks.
 
 ### Authentication APIs (`/api/auth`)
 
@@ -722,15 +722,6 @@ The application exposes 50+ RESTful API endpoints organized into 13 controllers.
 **Response**: Updated `Wallet`
 **Authentication**: Required (ADMIN role)
 
-### AI Job APIs (`/api/jobs`)
-
-#### POST `/api/jobs/generate`
-**Description**: Legacy AI generation endpoint
-**Request Body**: `{"prompt": "Generate content"}`
-**Response**: `AiJob`
-**Authentication**: Required
-**Note**: This is a legacy endpoint, use `/api/ai/generate` instead
-
 ### API Testing and Integration
 
 #### Authentication
@@ -783,7 +774,7 @@ Standard error format:
 
 AI Studio is a production-ready AI content generation platform with:
 - **32 database tables** following proper normalization
-- **50+ API endpoints** across 13 controllers
+- **Domain-focused API endpoints** with JWT authorization
 - **Multi-provider AI integration** (Gemini, OpenAI, Replicate)
 - **Flexible payment system** (Stripe, Razorpay, UPI)
 - **Credit-based billing** with transaction history
