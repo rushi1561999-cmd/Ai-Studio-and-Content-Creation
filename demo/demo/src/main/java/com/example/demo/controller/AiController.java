@@ -79,9 +79,6 @@ public class AiController {
     @GetMapping("/wallet/{workspaceId}")
     public ResponseEntity<Wallet> getWalletBalance(@PathVariable String workspaceId) {
         workspaceAccessService.requireWorkspaceAccess(workspaceId);
-        if (!manualTopUpEnabled && !workspaceAccessService.currentUser().isAdmin()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         return ResponseEntity.ok(walletBillingService.getOrCreateWallet(workspaceId));
     }
 
@@ -90,6 +87,10 @@ public class AiController {
             @PathVariable String workspaceId,
             @RequestParam int amount) {
         workspaceAccessService.requireWorkspaceAccess(workspaceId);
+
+        if (!manualTopUpEnabled && !workspaceAccessService.currentUser().isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         if (amount <= 0 || amount > MAX_TOPUP) {
             return ResponseEntity.badRequest().build();
