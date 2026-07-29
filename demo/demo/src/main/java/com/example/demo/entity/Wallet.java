@@ -7,11 +7,10 @@ import jakarta.persistence.*;
 public class Wallet {
 
     @Id
-    private String workspaceId; // We map the wallet directly to the user's workspace
+    private String workspaceId;
     
     private int credits;
 
-    // Default Constructor
     public Wallet() {}
 
     public Wallet(String workspaceId, int credits) {
@@ -19,7 +18,6 @@ public class Wallet {
         this.credits = credits;
     }
 
-    // Getters and Setters
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
 

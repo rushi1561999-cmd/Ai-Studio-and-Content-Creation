@@ -31,12 +31,19 @@ public class WorkspaceAccessService {
     }
 
     public void requireWorkspaceAccess(String workspaceId) {
-        String email = currentUserEmail();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found."));
+        requireWorkspaceAccessAndGetUser(workspaceId);
+    }
 
+    public User requireWorkspaceAccessAndGetUser(String workspaceId) {
+        User user = currentUser();
         if (!workspaceMemberRepository.existsByUser_IdAndWorkspace_Id(user.getId(), workspaceId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this workspace.");
         }
+        return user;
+    }
+
+    public User currentUser() {
+        return userRepository.findByEmail(currentUserEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found."));
     }
 }

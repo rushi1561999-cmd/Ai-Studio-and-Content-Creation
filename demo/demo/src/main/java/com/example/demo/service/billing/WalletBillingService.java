@@ -29,7 +29,7 @@ public class WalletBillingService {
         this.auditService = auditService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Wallet getOrCreateWallet(String workspaceId) {
         return walletRepository.findById(workspaceId).orElseGet(() -> {
             Wallet wallet = new Wallet(workspaceId, DEFAULT_FREE_CREDITS);
@@ -45,7 +45,9 @@ public class WalletBillingService {
         if (amount <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Credit amount must be positive.");
         }
-        Wallet wallet = getOrCreateWallet(workspaceId);
+        getOrCreateWallet(workspaceId);
+        Wallet wallet = walletRepository.findByIdForUpdate(workspaceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Wallet is unavailable."));
         wallet.setCredits(wallet.getCredits() + amount);
         Wallet saved = walletRepository.save(wallet);
         recordTransaction(workspaceId, amount, type, referenceId, description, saved.getCredits());
@@ -59,7 +61,7 @@ public class WalletBillingService {
         if (amount <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debit amount must be positive.");
         }
-        Wallet wallet = walletRepository.findById(workspaceId)
+        Wallet wallet = walletRepository.findByIdForUpdate(workspaceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Insufficient credits."));
         if (wallet.getCredits() < amount) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Insufficient credits.");

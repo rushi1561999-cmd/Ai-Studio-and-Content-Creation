@@ -1,28 +1,39 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import Prompts from "./pages/Prompts";
-import Marketplace from "./pages/Marketplace";
-import Wallet from "./pages/Wallet";
-import Assets from "./pages/Assets";
-import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
-import Workspaces from "./pages/Workspaces";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+import { lazy, Suspense } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminWorkspaces from "./pages/admin/AdminWorkspaces";
-import AdminMarketplace from "./pages/admin/AdminMarketplace";
-import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
-import AdminPayments from "./pages/admin/AdminPayments";
-import AdminSubscriptionPlans from "./pages/admin/AdminSubscriptionPlans";
-import AdminModels from "./pages/admin/AdminModels";
-import { isAdmin } from "./utils/auth";
+import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { isAdmin } from "./utils/auth";
+
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Prompts = lazy(() => import("./pages/Prompts"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const Wallet = lazy(() => import("./pages/Wallet"));
+const Assets = lazy(() => import("./pages/Assets"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Workspaces = lazy(() => import("./pages/Workspaces"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminWorkspaces = lazy(() => import("./pages/admin/AdminWorkspaces"));
+const AdminMarketplace = lazy(() => import("./pages/admin/AdminMarketplace"));
+const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
+const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
+const AdminSubscriptionPlans = lazy(
+  () => import("./pages/admin/AdminSubscriptionPlans"),
+);
+const AdminModels = lazy(() => import("./pages/admin/AdminModels"));
 
 function HomeRedirect() {
   const token = localStorage.getItem("jwt_token");
@@ -30,149 +41,73 @@ function HomeRedirect() {
   return <Navigate to={isAdmin() ? "/admin" : "/dashboard"} replace />;
 }
 
+function WorkspaceRoutes() {
+  return (
+    <ProtectedRoute>
+      <WorkspaceProvider>
+        <Outlet />
+      </WorkspaceProvider>
+    </ProtectedRoute>
+  );
+}
+
+function AdminRoutes() {
+  return (
+    <AdminRoute>
+      <Outlet />
+    </AdminRoute>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <div className="route-loading" role="status">
+      <span className="spinner" />
+      <span>Loading workspace…</span>
+    </div>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/prompts"
-            element={
-              <ProtectedRoute>
-                <Prompts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/marketplace"
-            element={
-              <ProtectedRoute>
-                <Marketplace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/assets"
-            element={
-              <ProtectedRoute>
-                <Assets />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/wallet"
-            element={
-              <ProtectedRoute>
-                <Wallet />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/workspaces"
-            element={
-              <ProtectedRoute>
-                <Workspaces />
-              </ProtectedRoute>
-            }
-          />
+            <Route element={<WorkspaceRoutes />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/prompts" element={<Prompts />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/assets" element={<Assets />} />
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/workspaces" element={<Workspaces />} />
+            </Route>
 
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <AdminRoute>
-                <AdminUsers />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/workspaces"
-            element={
-              <AdminRoute>
-                <AdminWorkspaces />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/marketplace"
-            element={
-              <AdminRoute>
-                <AdminMarketplace />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/audit-logs"
-            element={
-              <AdminRoute>
-                <AdminAuditLogs />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/payments"
-            element={
-              <AdminRoute>
-                <AdminPayments />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/subscription-plans"
-            element={
-              <AdminRoute>
-                <AdminSubscriptionPlans />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/ai-models"
-            element={
-              <AdminRoute>
-                <AdminModels />
-              </AdminRoute>
-            }
-          />
+            <Route element={<AdminRoutes />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/workspaces" element={<AdminWorkspaces />} />
+              <Route path="/admin/marketplace" element={<AdminMarketplace />} />
+              <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+              <Route path="/admin/payments" element={<AdminPayments />} />
+              <Route
+                path="/admin/subscription-plans"
+                element={<AdminSubscriptionPlans />}
+              />
+              <Route path="/admin/ai-models" element={<AdminModels />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ThemeProvider>
   );

@@ -11,13 +11,12 @@ import com.example.demo.repository.GenerationJobRepository;
 import com.example.demo.entity.WorkspaceMember;
 import com.example.demo.entity.WorkspaceRole;
 import com.example.demo.repository.WorkspaceMemberRepository;
+import com.example.demo.service.billing.WalletBillingService;
 import com.example.demo.service.ai.ContentGenerationService;
 import com.example.demo.service.ai.GenerationResult;
 import com.example.demo.service.notification.NotificationService;
 import com.example.demo.service.audit.AuditService;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -31,6 +30,8 @@ public class GenerationJobService {
     private final AuditService auditService;
     private final NotificationService notificationService;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final WalletBillingService walletBillingService;
+    private final JobEventService jobEventService;
 
     public GenerationJobService(
             ContentGenerationService contentGenerationService,
@@ -39,7 +40,9 @@ public class GenerationJobService {
             AiModelRepository aiModelRepository,
             AuditService auditService,
             NotificationService notificationService,
-            WorkspaceMemberRepository workspaceMemberRepository) {
+            WorkspaceMemberRepository workspaceMemberRepository,
+            WalletBillingService walletBillingService,
+            JobEventService jobEventService) {
         this.contentGenerationService = contentGenerationService;
         this.jobRepository = jobRepository;
         this.generatedContentRepository = generatedContentRepository;
@@ -47,18 +50,20 @@ public class GenerationJobService {
         this.auditService = auditService;
         this.notificationService = notificationService;
         this.workspaceMemberRepository = workspaceMemberRepository;
+        this.walletBillingService = walletBillingService;
+        this.jobEventService = jobEventService;
     }
 
-    @Async
-    @Transactional
-    public void processAsync(String jobId) {
+    public void process(String jobId) {
+        if (jobRepository.claimPending(jobId) == 0) {
+            return;
+        }
         GenerationJob job = jobRepository.findById(jobId).orElse(null);
         if (job == null) {
             return;
         }
 
-        job.setStatus("PROCESSING");
-        jobRepository.save(job);
+        jobEventService.publish(job);
 
         ContentType contentType = ContentType.fromString(job.getContentType());
         Optional<AiModel> model = resolveModel(job);
@@ -71,11 +76,7 @@ public class GenerationJobService {
             );
 
             if (!result.isSuccess()) {
-                job.setStatus("FAILED");
-                job.setResult("Error: " + result.getErrorMessage());
-                jobRepository.save(job);
-                auditService.log(null, job.getWorkspaceId(), "GENERATION_FAILED", "GenerationJob", job.getId(), null);
-                notifyWorkspaceOwner(job, true, contentType);
+                failJob(job, contentType, "The AI provider could not complete this job.");
                 return;
             }
 
@@ -93,18 +94,41 @@ public class GenerationJobService {
             content.setAiModelId(model.map(AiModel::getId).orElse(null));
             generatedContentRepository.save(content);
 
-            auditService.log(null, job.getWorkspaceId(), "GENERATION_COMPLETED", "GenerationJob", job.getId(),
-                    "{\"contentType\":\"" + contentType + "\"}");
-
-            notifyWorkspaceOwner(job, false, contentType);
+            try {
+                auditService.log(null, job.getWorkspaceId(), "GENERATION_COMPLETED", "GenerationJob", job.getId(),
+                        "{\"contentType\":\"" + contentType + "\"}");
+                notifyWorkspaceOwner(job, false, contentType);
+            } catch (RuntimeException ignored) {
+                // Generation is complete even if a secondary audit/notification write fails.
+            }
+            jobEventService.publish(job);
 
         } catch (Exception e) {
-            job.setStatus("FAILED");
-            job.setResult("Error: " + e.getMessage());
-            jobRepository.save(job);
-            auditService.log(null, job.getWorkspaceId(), "GENERATION_FAILED", "GenerationJob", job.getId(),
-                    "{\"error\":\"" + e.getMessage() + "\"}");
+            failJob(job, contentType, "The generation service is temporarily unavailable.");
         }
+    }
+
+    private void failJob(GenerationJob job, ContentType contentType, String message) {
+        job.setStatus("FAILED");
+        job.setResult("Error: " + message);
+        jobRepository.save(job);
+        try {
+            walletBillingService.credit(
+                    job.getWorkspaceId(),
+                    contentType.getCreditCost(),
+                    com.example.demo.enums.CreditTransactionType.ADJUSTMENT,
+                    job.getId(),
+                    "Automatic refund for failed generation");
+        } catch (RuntimeException ignored) {
+            // The failed job remains visible; operations can reconcile a rare refund failure.
+        }
+        try {
+            auditService.log(null, job.getWorkspaceId(), "GENERATION_FAILED", "GenerationJob", job.getId(), null);
+            notifyWorkspaceOwner(job, true, contentType);
+        } catch (RuntimeException ignored) {
+            // Do not hide the terminal job state when a secondary write fails.
+        }
+        jobEventService.publish(job);
     }
 
     private String buildStoredContent(GenerationResult result, ContentType type) {

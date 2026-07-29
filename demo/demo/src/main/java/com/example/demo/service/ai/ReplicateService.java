@@ -24,7 +24,11 @@ public class ReplicateService {
     @Value("${ai.image.fallback.enabled:true}")
     private boolean imageFallbackEnabled;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public ReplicateService(RestTemplate providerRestTemplate) {
+        this.restTemplate = providerRestTemplate;
+    }
 
     public boolean isConfigured() {
         return apiToken != null && !apiToken.isBlank();

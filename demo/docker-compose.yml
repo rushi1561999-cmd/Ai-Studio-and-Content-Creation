@@ -4,19 +4,50 @@ services:
     container_name: aistudio-mysql
     environment:
       MYSQL_DATABASE: cdac
-      MYSQL_USER: demo
-      MYSQL_PASSWORD: demopass
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: ${MYSQL_USER:-demo}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-demopass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-only}
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 8
       start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    container_name: aistudio-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-aistudio}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local-rabbit-only}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  redis:
+    image: redis:8.2-alpine
+    container_name: aistudio-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
 
   backend:
     build: ./demo
@@ -26,27 +57,76 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cdac
-      SPRING_DATASOURCE_USERNAME: demo
-      SPRING_DATASOURCE_PASSWORD: demopass
-      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-demo}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-demopass}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       APP_FRONTEND_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      AI_PROCESSING_RABBITMQ: "true"
+      RABBITMQ_ADDRESSES: amqp://${RABBITMQ_USER:-aistudio}:${RABBITMQ_PASSWORD:-local-rabbit-only}@rabbitmq:5672
+      REDIS_HOST: redis
+      APP_CACHE_PROVIDER: redis
+      PROMPT_REDIS_RATE_LIMIT_ENABLED: "true"
+      AI_JOB_STREAM_REDIS_ENABLED: "true"
+      DB_POOL_MAX_SIZE: 20
     depends_on:
       mysql:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8081/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: http://localhost:8081/api
+    build: ./frontend
     container_name: aistudio-frontend
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: aistudio-prometheus
+    profiles: ["monitoring"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: aistudio-grafana
+    profiles: ["monitoring"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-grafana-only}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
 
 volumes:
   mysql_data:
+  rabbitmq_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

@@ -22,7 +22,7 @@ export default function Prompts() {
     setLoading(true);
     try {
       const { data } = await api.get(`/prompts/workspace/${workspaceId}`);
-      setPrompts(data);
+      setPrompts(data.content ?? data);
     } catch (err) {
       setError(err.message || "Failed to load prompts.");
     } finally {
@@ -39,7 +39,7 @@ export default function Prompts() {
         return api.get(`/prompts/workspace/${workspaceId}`);
       })
       .then(({ data }) => {
-        if (!cancelled) setPrompts(data);
+        if (!cancelled) setPrompts(data.content ?? data);
       })
       .catch((err) => {
         if (!cancelled) setError(err.message || "Failed to load prompts.");
