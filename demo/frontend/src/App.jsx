@@ -5,7 +5,7 @@ import {
   Outlet,
   Route,
   Routes,
-} from "react-router-dom";
+} from "react-router";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
@@ -63,7 +63,7 @@ function RouteFallback() {
   return (
     <div className="route-loading" role="status">
       <span className="spinner" />
-      <span>Loading workspace…</span>
+      <span>Loading workspaceâ€¦</span>
     </div>
   );
 }

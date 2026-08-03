@@ -30,7 +30,10 @@ export default function AdminPayments() {
                   {p.workspaceId?.substring(0, 8)}…
                 </td>
                 <td>{p.provider}</td>
-                <td>${(p.amountCents / 100).toFixed(2)}</td>
+                <td>{new Intl.NumberFormat(undefined, {
+                  style: "currency",
+                  currency: p.currency || "INR",
+                }).format((p.amountCents || 0) / 100)}</td>
                 <td>{p.creditsGranted}</td>
                 <td>{p.status}</td>
                 <td>{p.createdAt ? new Date(p.createdAt).toLocaleString() : "—"}</td>

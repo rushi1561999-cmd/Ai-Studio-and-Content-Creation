@@ -11,7 +11,6 @@ import com.example.demo.repository.GeneratedContentRepository;
 import com.example.demo.service.GenerationJobProcessor;
 import com.example.demo.service.WorkspaceAccessService;
 import com.example.demo.service.billing.WalletBillingService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -23,6 +22,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.example.demo.service.job.JobEventService;
+import jakarta.validation.Valid;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,9 +39,6 @@ public class AiController {
     private final GeneratedContentRepository generatedContentRepository;
     private final JobEventService jobEventService;
     private final boolean rabbitMqEnabled;
-    private final boolean manualTopUpEnabled;
-
-    private static final int MAX_TOPUP = 10_000;
     private static final int MAX_PROMPT_LENGTH = 4_000;
 
     public AiController(
@@ -52,8 +49,7 @@ public class AiController {
             WorkspaceAccessService workspaceAccessService,
             GeneratedContentRepository generatedContentRepository,
             JobEventService jobEventService,
-            @Value("${ai.processing.rabbitmq:false}") boolean rabbitMqEnabled,
-            @Value("${app.dev.manual-topup.enabled:false}") boolean manualTopUpEnabled) {
+            @org.springframework.beans.factory.annotation.Value("${ai.processing.rabbitmq:false}") boolean rabbitMqEnabled) {
         this.aiJobProducer = aiJobProducer;
         this.jobRepository = jobRepository;
         this.walletBillingService = walletBillingService;
@@ -62,7 +58,6 @@ public class AiController {
         this.generatedContentRepository = generatedContentRepository;
         this.jobEventService = jobEventService;
         this.rabbitMqEnabled = rabbitMqEnabled;
-        this.manualTopUpEnabled = manualTopUpEnabled;
     }
 
     @GetMapping("/content-types")
@@ -82,31 +77,9 @@ public class AiController {
         return ResponseEntity.ok(walletBillingService.getOrCreateWallet(workspaceId));
     }
 
-    @PostMapping("/wallet/{workspaceId}/topup")
-    public ResponseEntity<Wallet> topUpCredits(
-            @PathVariable String workspaceId,
-            @RequestParam int amount) {
-        workspaceAccessService.requireWorkspaceAccess(workspaceId);
-
-        if (!manualTopUpEnabled && !workspaceAccessService.currentUser().isAdmin()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        if (amount <= 0 || amount > MAX_TOPUP) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        return ResponseEntity.ok(walletBillingService.credit(
-                workspaceId,
-                amount,
-                com.example.demo.enums.CreditTransactionType.ADJUSTMENT,
-                null,
-                "Manual top-up"));
-    }
-
     @PostMapping("/generate")
     @Transactional
-    public ResponseEntity<?> generateAiContent(@RequestBody GenerateContentRequest request) {
+    public ResponseEntity<?> generateAiContent(@Valid @RequestBody GenerateContentRequest request) {
         if (request.getPromptText() == null || request.getPromptText().isBlank()) {
             return ResponseEntity.badRequest().body("Prompt text is required.");
         }
@@ -161,19 +134,6 @@ public class AiController {
         }
 
         return ResponseEntity.ok(job);
-    }
-
-    /** Legacy query-param endpoint for backward compatibility */
-    @PostMapping("/generate/simple")
-    @Transactional
-    public ResponseEntity<?> generateSimple(
-            @RequestParam String promptText,
-            @RequestParam String workspaceId) {
-        GenerateContentRequest request = new GenerateContentRequest();
-        request.setPromptText(promptText);
-        request.setWorkspaceId(workspaceId);
-        request.setContentType("TEXT");
-        return generateAiContent(request);
     }
 
     @GetMapping("/jobs/{jobId}")

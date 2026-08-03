@@ -25,7 +25,7 @@ public class DataInitializer {
             seedRole(roleRepository, "WORKSPACE_EDITOR", "Workspace Editor", "Can edit workspace content");
             seedRole(roleRepository, "WORKSPACE_VIEWER", "Workspace Viewer", "Read-only workspace access");
 
-            seedAiModel(aiModelRepository, "gemini-2.0-flash", "Gemini 2.0 Flash",
+            seedAiModel(aiModelRepository, "gemini-2.5-flash", "Gemini 2.5 Flash",
                     AiProvider.GEMINI, "TEXT", 1);
             seedAiModel(aiModelRepository, "flux-schnell", "Flux Schnell (Image)",
                     AiProvider.REPLICATE, "IMAGE", 3);
@@ -34,9 +34,10 @@ public class DataInitializer {
             seedAiModel(aiModelRepository, "gemini-mixed", "Gemini Rich Content",
                     AiProvider.GEMINI, "MIXED", 5);
 
-            seedPlan(subscriptionPlanRepository, "FREE", "Free", 5, 0);
-            seedPlan(subscriptionPlanRepository, "STARTER", "Starter", 50, 999);
-            seedPlan(subscriptionPlanRepository, "PRO", "Pro", 200, 2999);
+            seedPlan(subscriptionPlanRepository, "FREE", "Free", 5, 0, false);
+            seedPlan(subscriptionPlanRepository, "starter", "Starter", 100, 9000, true);
+            seedPlan(subscriptionPlanRepository, "professional", "Professional", 500, 29900, true);
+            seedPlan(subscriptionPlanRepository, "enterprise", "Enterprise", 1000, 79900, true);
         };
     }
 
@@ -76,15 +77,20 @@ public class DataInitializer {
         }
     }
 
-    private void seedPlan(SubscriptionPlanRepository repo, String code, String name, int credits, int priceCents) {
-        if (!repo.findByCode(code).isPresent()) {
-            SubscriptionPlan plan = new SubscriptionPlan();
-            plan.setCode(code);
-            plan.setName(name);
-            plan.setMonthlyCredits(credits);
-            plan.setPriceCents(priceCents);
-            plan.setActive(true);
-            repo.save(plan);
-        }
+    private void seedPlan(
+            SubscriptionPlanRepository repo,
+            String code,
+            String name,
+            int credits,
+            int priceCents,
+            boolean active) {
+        SubscriptionPlan plan = repo.findByCode(code).orElseGet(SubscriptionPlan::new);
+        plan.setCode(code);
+        plan.setName(name);
+        plan.setMonthlyCredits(credits);
+        plan.setPriceCents(priceCents);
+        plan.setCurrency("INR");
+        plan.setActive(active);
+        repo.save(plan);
     }
 }

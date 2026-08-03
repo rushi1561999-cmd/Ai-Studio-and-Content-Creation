@@ -5,6 +5,7 @@ import com.example.demo.service.AuthService;
 import com.example.demo.service.UserAccountService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,22 +20,22 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<PasswordResetResponse> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<PasswordResetResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(userAccountService.requestPasswordReset(request));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<MessageResponse> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return ResponseEntity.ok(userAccountService.resetPassword(request));
     }
 
@@ -44,12 +45,12 @@ public class AuthController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UpdateUserResponse> updateMe(@RequestBody UpdateUserRequest request) {
+    public ResponseEntity<UpdateUserResponse> updateMe(@Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userAccountService.updateCurrentUser(request));
     }
 
     @DeleteMapping("/me")
-    public ResponseEntity<MessageResponse> deleteMe(@RequestBody DeleteAccountRequest request) {
+    public ResponseEntity<MessageResponse> deleteMe(@Valid @RequestBody DeleteAccountRequest request) {
         return ResponseEntity.ok(userAccountService.deleteCurrentUser(request));
     }
 }

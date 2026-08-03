@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import Icon from "./Icon";
 
 const FEATURES = [
@@ -56,7 +56,7 @@ export default function AuthShell({ eyebrow, title, description, children, foote
           {children}
           {footer && <footer className="auth-footer">{footer}</footer>}
         </div>
-        <p className="auth-legal">Secure access · Your credentials stay private</p>
+        <p className="auth-legal">Secure access Â· Your credentials stay private</p>
       </main>
     </div>
   );

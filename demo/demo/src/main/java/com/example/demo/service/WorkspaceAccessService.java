@@ -46,4 +46,9 @@ public class WorkspaceAccessService {
         return userRepository.findByEmail(currentUserEmail())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found."));
     }
+
+    public boolean isAdmin() {
+        User user = currentUser();
+        return user.isAdmin();
+    }
 }

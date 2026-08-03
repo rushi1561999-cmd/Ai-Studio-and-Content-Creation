@@ -78,6 +78,33 @@ export default function AiGenerator({
     MIXED: "Launch campaign for an AI productivity app…",
   };
 
+  const quickPrompts = {
+    TEXT: [
+      "Write a professional email about",
+      "Create a blog post explaining",
+      "Generate a summary of",
+      "Write a product description for",
+    ],
+    IMAGE: [
+      "A photorealistic image of",
+      "An abstract art piece featuring",
+      "A landscape scene with",
+      "A portrait of a",
+    ],
+    VIDEO: [
+      "A timelapse of",
+      "A slow-motion shot of",
+      "A cinematic drone shot showing",
+      "An animated sequence of",
+    ],
+    MIXED: [
+      "Create a marketing campaign for",
+      "Design a social media post about",
+      "Generate a product launch for",
+      "Create a brand story for",
+    ],
+  };
+
   const isGenerating = status === "PENDING" || status === "PROCESSING";
 
   const handleGenerate = async () => {
@@ -270,6 +297,20 @@ export default function AiGenerator({
           ))}
         </div>
       )}
+
+      <div className="quick-prompts">
+        <span>Auto-suggestions:</span>
+        {quickPrompts[contentType]?.slice(0, 4).map((suggestion, index) => (
+          <button
+            key={index}
+            type="button"
+            className="chip"
+            onClick={() => setPromptText(suggestion)}
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
 
       <VoiceAssistant
         onTranscript={(text) =>

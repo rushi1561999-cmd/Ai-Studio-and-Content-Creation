@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router";
 import Icon from "../../components/Icon";
 import { clearAuthSession } from "../../utils/auth";
 import "./AdminLayout.css";

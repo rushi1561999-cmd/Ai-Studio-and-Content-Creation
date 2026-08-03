@@ -18,7 +18,10 @@ public class SubscriptionPlanService {
 
     @Transactional(readOnly = true)
     public List<SubscriptionPlan> listActivePlans() {
-        return subscriptionPlanRepository.findByActiveTrueOrderByPriceCentsAsc();
+        return subscriptionPlanRepository.findByActiveTrueOrderByPriceCentsAsc()
+                .stream()
+                .filter(plan -> plan.getPriceCents() > 0)
+                .toList();
     }
 
     @Transactional(readOnly = true)

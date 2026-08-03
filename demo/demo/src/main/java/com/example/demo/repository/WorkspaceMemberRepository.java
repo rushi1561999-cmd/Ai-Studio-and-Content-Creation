@@ -16,6 +16,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     boolean existsByUser_IdAndWorkspace_Id(String userId, String workspaceId);
 
     Optional<WorkspaceMember> findFirstByWorkspace_IdAndRole(String workspaceId, WorkspaceRole role);
+    Optional<WorkspaceMember> findFirstByUser_IdOrderByJoinedAtAsc(String userId);
 
     void deleteByUser_Id(String userId);
 }

@@ -1,9 +1,19 @@
 package com.example.demo.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class PromptRequest {
+    @NotBlank
+    @Size(max = 160)
     private String title;
+    @NotBlank
+    @Size(max = 4000)
     private String content;
+    @NotBlank
+    @Size(max = 80)
     private String categoryName; 
+    @NotBlank
     private String workspaceId;
 
     public String getTitle() { return title; }

@@ -15,6 +15,7 @@ import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 @Service
 public class EmailService {
@@ -71,11 +72,9 @@ public class EmailService {
             mailSender.send(message);
             logger.info("[Email] Registration email sent successfully to: " + toEmail);
         } catch (MessagingException e) {
-            logger.severe("[Email] Failed to send registration email to " + toEmail + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "[Email] Failed to send registration email to " + toEmail, e);
         } catch (Exception e) {
-            logger.severe("[Email] Unexpected error sending registration email to " + toEmail + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "[Email] Unexpected error sending registration email to " + toEmail, e);
         }
     }
 
@@ -109,11 +108,9 @@ public class EmailService {
             mailSender.send(message);
             logger.info("[Email] Login notification sent successfully to: " + toEmail);
         } catch (MessagingException e) {
-            logger.severe("[Email] Failed to send login notification to " + toEmail + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "[Email] Failed to send login notification to " + toEmail, e);
         } catch (Exception e) {
-            logger.severe("[Email] Unexpected error sending login notification to " + toEmail + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "[Email] Unexpected error sending login notification to " + toEmail, e);
         }
     }
 
@@ -132,9 +129,23 @@ public class EmailService {
             mailSender.send(message);
             logger.info("[Email] Simple email sent successfully to: " + toEmail);
         } catch (Exception e) {
-            logger.severe("[Email] Failed to send simple email to " + toEmail + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "[Email] Failed to send simple email to " + toEmail, e);
         }
+    }
+
+    @Async("emailExecutor")
+    public void sendPasswordResetEmail(String toEmail, String fullName, String resetUrl) {
+        if (!emailEnabled) {
+            logger.warning("[Email] Password reset requested while email delivery is disabled.");
+            return;
+        }
+        String greeting = fullName == null || fullName.isBlank() ? "Hello" : "Hello " + fullName;
+        String body = greeting + ",\n\n"
+                + "Use the secure link below to reset your " + appName + " password. "
+                + "The link expires in one hour and can be used only once.\n\n"
+                + resetUrl + "\n\n"
+                + "If you did not request this change, ignore this message.";
+        sendSimpleEmail(toEmail, "Reset your " + appName + " password", body);
     }
 
     public boolean isConfigured() {

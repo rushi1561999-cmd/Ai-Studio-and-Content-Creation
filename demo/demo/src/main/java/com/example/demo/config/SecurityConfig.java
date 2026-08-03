@@ -61,21 +61,20 @@ public class SecurityConfig {
                         "/api/auth/forgot-password",
                         "/api/auth/reset-password")
                     .permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/stripe/webhook").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/stripe/webhook", "/api/razorpay/webhook").permitAll()
+                .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/auth/**").authenticated()
                 .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
+                .anyRequest().denyAll()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
-                    System.out.println("Security: Authentication failed for " + request.getRequestURI() + " - " + authException.getMessage());
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"message\":\"Unauthorized. Please log in with a valid token.\"}");
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    System.out.println("Security: Access denied for " + request.getRequestURI() + " - " + accessDeniedException.getMessage());
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"message\":\"Access denied.\"}");

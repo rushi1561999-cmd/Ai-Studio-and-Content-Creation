@@ -1,7 +1,6 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.WorkspaceRequest;
-
 import com.example.demo.dto.WorkspaceResponse;
 import com.example.demo.entity.User;
 import com.example.demo.entity.Workspace;
@@ -48,7 +47,7 @@ public class WorkspaceService {
 
         // 2. Create and save the new Workspace
         Workspace workspace = new Workspace();
-        workspace.setName(request.getName());
+        workspace.setName(request.getName().trim());
         Workspace savedWorkspace = workspaceRepository.saveAndFlush(workspace);
 
         // 3. Add the creator as the OWNER
@@ -70,6 +69,8 @@ public class WorkspaceService {
         return response;
     }
 
+    // Fixed: Added @Transactional to keep the database session open for lazy loading
+    @Transactional(readOnly = true)
     public List<WorkspaceResponse> getUserWorkspaces(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found."));

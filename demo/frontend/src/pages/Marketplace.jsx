@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
 import Icon from "../components/Icon";
@@ -107,11 +107,11 @@ export default function Marketplace() {
             className="input"
             value={publishText}
             onChange={(e) => setPublishText(e.target.value)}
-            placeholder="Paste a prompt that others can reuse…"
+            placeholder="Paste a prompt that others can reuseâ€¦"
             rows={3}
           />
           <button type="submit" className="btn btn-primary" disabled={publishing || !publishText.trim()}>
-            {publishing ? "Publishing…" : "Publish prompt"}
+            {publishing ? "Publishingâ€¦" : "Publish prompt"}
           </button>
         </div>
       </form>
@@ -145,7 +145,7 @@ export default function Marketplace() {
               <p className="prompt-text">{post.promptText}</p>
               <div className="card-footer">
                 <button type="button" className="like-btn btn btn-secondary" onClick={() => handleLike(post.id)}>
-                  <span aria-hidden="true">♡</span> {post.likes || 0}
+                  <span aria-hidden="true">â™¡</span> {post.likes || 0}
                 </button>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => handleUsePrompt(post.promptText)}>
                   Use prompt <Icon name="arrowRight" size={15} />

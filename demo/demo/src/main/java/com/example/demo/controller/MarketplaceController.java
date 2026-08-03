@@ -5,6 +5,7 @@ import com.example.demo.entity.MarketplacePost;
 import com.example.demo.service.MarketplaceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/publish")
-    public ResponseEntity<MarketplacePost> publishPost(@RequestBody MarketplacePublishRequest request) {
+    public ResponseEntity<MarketplacePost> publishPost(@Valid @RequestBody MarketplacePublishRequest request) {
         return ResponseEntity.ok(marketplaceService.publish(request));
     }
 

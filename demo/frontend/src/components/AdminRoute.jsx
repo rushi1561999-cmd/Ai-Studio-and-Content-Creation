@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 import { isAdmin } from "../utils/auth";
 
 export default function AdminRoute({ children }) {

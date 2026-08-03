@@ -1,9 +1,11 @@
 package com.example.demo.enums;
 
 public enum CreditPack {
-    STARTER("starter", 100, 900L, "Starter — 100 AI credits"),
-    PROFESSIONAL("professional", 500, 2900L, "Professional — 500 AI credits"),
-    ENTERPRISE("enterprise", 1000, 9900L, "Enterprise — 1000 AI credits");
+    STARTER("starter", 100, 9_000L, "Starter — 100 AI credits"),
+    PROFESSIONAL("professional", 500, 29_900L, "Professional — 500 AI credits"),
+    ENTERPRISE("enterprise", 1000, 79_900L, "Enterprise — 1000 AI credits");
+
+    public static final String CURRENCY = "INR";
 
     private final String id;
     private final int credits;

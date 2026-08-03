@@ -38,14 +38,12 @@ public class NotificationController {
     @PatchMapping("/{id}/read")
     public ResponseEntity<Notification> markRead(@PathVariable String id) {
         String email = workspaceAccessService.currentUserEmail();
-        System.out.println("Marking notification " + id + " as read for user: " + email);
         return ResponseEntity.ok(notificationService.markRead(id, email));
     }
 
     @PatchMapping("/read-all")
     public ResponseEntity<Map<String, Integer>> markAllRead() {
         String email = workspaceAccessService.currentUserEmail();
-        System.out.println("Marking all notifications as read for user: " + email);
         int updated = notificationService.markAllAsRead(email);
         return ResponseEntity.ok(Map.of("updated", updated));
     }

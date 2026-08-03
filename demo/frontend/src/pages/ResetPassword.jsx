@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import api from "../api/axiosConfig";
 import AuthShell from "../components/AuthShell";
 import Icon from "../components/Icon";
@@ -9,7 +9,6 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tokenFromUrl = searchParams.get("token") || "";
-  const [token, setToken] = useState(tokenFromUrl);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState("");
@@ -19,13 +18,14 @@ export default function ResetPassword() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (password !== confirm) return setError("Passwords do not match.");
-    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (!tokenFromUrl) return setError("This reset link is missing its secure token. Request a new link.");
+    if (password.length < 10) return setError("Password must be at least 10 characters.");
     setLoading(true);
     setError("");
     setMessage("");
     try {
       const { data } = await api.post("/auth/reset-password", {
-        token: token.trim(),
+        token: tokenFromUrl,
         newPassword: password,
       });
       setMessage(data.message);
@@ -48,35 +48,26 @@ export default function ResetPassword() {
       {message && <div className="success-message" role="status">{message}</div>}
       <form className="auth-form" onSubmit={handleSubmit}>
         {!tokenFromUrl && (
-          <label className="auth-field">
-            <span>Reset token</span>
-            <span className="auth-input-wrap">
-              <Icon name="key" size={18} />
-              <input
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Paste the token from your email"
-                required
-                value={token}
-              />
-            </span>
-          </label>
+          <div className="error-message" role="alert">
+            Invalid reset link. <Link to="/forgot-password">Request a new link</Link>.
+          </div>
         )}
         <label className="auth-field">
           <span>New password</span>
           <span className="auth-input-wrap">
             <Icon name="lock" size={18} />
-            <input autoComplete="new-password" minLength={6} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+            <input autoComplete="new-password" minLength={10} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
           </span>
         </label>
         <label className="auth-field">
           <span>Confirm password</span>
           <span className="auth-input-wrap">
             <Icon name="lock" size={18} />
-            <input autoComplete="new-password" minLength={6} onChange={(event) => setConfirm(event.target.value)} required type="password" value={confirm} />
+            <input autoComplete="new-password" minLength={10} onChange={(event) => setConfirm(event.target.value)} required type="password" value={confirm} />
           </span>
         </label>
-        <button className="btn btn-primary auth-submit" disabled={loading} type="submit">
-          {loading ? "Updating…" : "Update password"}
+        <button className="btn btn-primary auth-submit" disabled={loading || !tokenFromUrl} type="submit">
+          {loading ? "Updatingâ€¦" : "Update password"}
           {!loading && <Icon name="arrowRight" size={17} />}
         </button>
       </form>

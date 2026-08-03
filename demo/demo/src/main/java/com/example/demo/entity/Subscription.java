@@ -27,7 +27,7 @@ public class Subscription {
     private int monthlyCredits;
 
     @Column(name = "status", nullable = false)
-    private String status = "ACTIVE";
+    private String status = "PENDING";
 
     @Column(name = "renewal_date")
     private LocalDateTime renewalDate;

@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS = "Invalid email or password.";
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -51,8 +54,8 @@ public class AuthService {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required.");
         }
-        if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters.");
+        if (request.getPassword() == null || request.getPassword().length() < 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 10 characters.");
         }
         if (userRepository.existsByEmail(request.getEmail().trim().toLowerCase())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
@@ -61,7 +64,7 @@ public class AuthService {
         User user = new User();
         user.setEmail(request.getEmail().trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setFullName(request.getFullName());
+        user.setFullName(request.getFullName().trim());
         user.setPlatformRole(PlatformRole.USER);
 
         userRepository.save(user);
@@ -78,7 +81,7 @@ public class AuthService {
             try {
                 emailService.sendRegistrationEmail(user.getEmail(), user.getFullName());
             } catch (Exception e) {
-                System.err.println("[AuthService] Failed to send registration email: " + e.getMessage());
+                log.warn("Registration email could not be queued for user {}", user.getId(), e);
             }
         }
 
@@ -104,7 +107,7 @@ public class AuthService {
                 String loginTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' hh:mm a"));
                 emailService.sendLoginNotification(user.getEmail(), user.getFullName(), loginTime);
             } catch (Exception e) {
-                System.err.println("[AuthService] Failed to send login notification email: " + e.getMessage());
+                log.warn("Login notification email could not be queued for user {}", user.getId(), e);
             }
         }
 

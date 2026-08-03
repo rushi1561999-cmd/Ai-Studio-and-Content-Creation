@@ -14,7 +14,7 @@ export default function AdminSubscriptionPlans() {
     name: "",
     monthlyCredits: "",
     price: "",
-    currency: "USD",
+    currency: "INR",
     active: true,
   });
 
@@ -57,7 +57,7 @@ export default function AdminSubscriptionPlans() {
       name: "",
       monthlyCredits: "",
       price: "",
-      currency: "USD",
+      currency: "INR",
       active: true,
     });
     setShowModal(true);
@@ -249,14 +249,14 @@ export default function AdminSubscriptionPlans() {
               </div>
 
               <div className="form-group">
-                <label>Price *</label>
+                <label>Price in minor units (paise/cents) *</label>
                 <input
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   required
                   min="0"
-                  placeholder="e.g., 9 or 900"
+                  placeholder="e.g., 29900 for ₹299.00"
                 />
               </div>
 
