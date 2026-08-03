@@ -4,3 +4,12 @@
 .vscode/
 *.log
 .DS_Store
+**/target/
+**/node_modules/
+**/dist/
+**/data/
+**/uploads/
+**/src/main/resources/application-local.properties
+.env
+.env.*
+!.env.example

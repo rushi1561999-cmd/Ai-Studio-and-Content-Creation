@@ -3,31 +3,44 @@ package com.example.demo.security;
 import com.example.demo.enums.PlatformRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
-
-    private static final long EXPIRATION_TIME = 86400000;
     private static final String ROLE_CLAIM = "role";
 
+    private final SecretKey signingKey;
+    private final long expirationMs;
+
+    public JwtService(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 bytes.");
+        }
+        if (expirationMs < 60_000) {
+            throw new IllegalStateException("JWT expiration must be at least one minute.");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
+    }
+
     public String generateToken(String email, PlatformRole role) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(email)
                 .claim(ROLE_CLAIM, role != null ? role.name() : PlatformRole.USER.name())
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSigningKey())
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + expirationMs))
+                .signWith(signingKey)
                 .compact();
     }
 
@@ -41,7 +54,7 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, String userEmail) {
-        final String email = extractEmail(token);
+        String email = extractEmail(token);
         return email.equals(userEmail) && !isTokenExpired(token);
     }
 
@@ -50,16 +63,11 @@ public class JwtService {
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = Jwts.parser()
-                .verifyWith(getSigningKey())
+        Claims claims = Jwts.parser()
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
         return claimsResolver.apply(claims);
-    }
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

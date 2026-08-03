@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
 import { clearAuthSession, setAuthSession } from "../utils/auth";
@@ -126,12 +126,12 @@ export default function Settings() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              minLength={6}
+              minLength={10}
             />
           </label>
 
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? "Savingâ€¦" : "Save changes"}
           </button>
         </form>
 
@@ -150,7 +150,7 @@ export default function Settings() {
           </label>
 
           <button type="submit" className="btn-danger" disabled={deleting}>
-            {deleting ? "Deleting…" : "Delete my account"}
+            {deleting ? "Deletingâ€¦" : "Delete my account"}
           </button>
         </form>
       </div>

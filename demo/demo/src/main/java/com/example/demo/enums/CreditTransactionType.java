@@ -4,6 +4,7 @@ public enum CreditTransactionType {
     PURCHASE,
     DEBIT,
     CREDIT,
+    SUBSCRIPTION,
     ADJUSTMENT,
     REFUND
 }

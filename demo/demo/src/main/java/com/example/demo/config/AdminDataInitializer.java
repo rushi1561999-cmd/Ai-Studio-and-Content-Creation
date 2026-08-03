@@ -23,6 +23,12 @@ public class AdminDataInitializer {
             @Value("${app.admin.name:Platform Admin}") String adminName) {
         return args -> {
             String email = adminEmail.trim().toLowerCase();
+            if (email.isBlank() || !email.contains("@")) {
+                throw new IllegalStateException("APP_ADMIN_EMAIL must be a valid email when admin seeding is enabled.");
+            }
+            if (adminPassword == null || adminPassword.length() < 10) {
+                throw new IllegalStateException("APP_ADMIN_PASSWORD must contain at least 10 characters.");
+            }
             userRepository.findByEmail(email).ifPresentOrElse(
                     user -> {
                         if (user.getPlatformRole() != PlatformRole.ADMIN) {

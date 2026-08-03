@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
 import Icon from "../components/Icon";
@@ -96,7 +96,7 @@ export default function Workspaces() {
             />
           </label>
           <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? "Creating…" : "Create workspace"}
+            {saving ? "Creatingâ€¦" : "Create workspace"}
           </button>
         </form>
       )}
@@ -104,7 +104,7 @@ export default function Workspaces() {
       {loading ? (
         <div className="card empty-state animate-fadeIn">
           <div className="empty-icon"><span className="spinner" /></div>
-          <h3>Loading workspaces…</h3>
+          <h3>Loading workspacesâ€¦</h3>
         </div>
       ) : workspaces.length === 0 ? (
         <div className="card empty-state animate-fadeIn">
@@ -143,7 +143,7 @@ export default function Workspaces() {
 }
 
 function formatDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

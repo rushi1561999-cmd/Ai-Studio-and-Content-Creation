@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import api from "../api/axiosConfig";
 import AppLayout from "../components/AppLayout";
 import { useWorkspace } from "../context/workspace-context";
@@ -94,7 +94,7 @@ export default function Dashboard() {
           ) : (
             <div className="card empty-state animate-fadeIn">
               <div className="empty-icon"><span className="spinner" /></div>
-              <h3>Preparing your workspace…</h3>
+              <h3>Preparing your workspaceâ€¦</h3>
             </div>
           )}
         </div>
@@ -117,7 +117,7 @@ export default function Dashboard() {
                       <span className="prompt-emoji"><Icon name="sparkles" size={16} /></span>
                       <div className="prompt-content">
                         <strong>{p.title}</strong>
-                        <span>{p.content.substring(0, 60)}…</span>
+                        <span>{p.content.substring(0, 60)}â€¦</span>
                       </div>
                     </button>
                   </li>

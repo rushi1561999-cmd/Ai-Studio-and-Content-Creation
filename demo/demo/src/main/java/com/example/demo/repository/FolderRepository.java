@@ -8,4 +8,5 @@ import java.util.List;
 public interface FolderRepository extends JpaRepository<Folder, String> {
     List<Folder> findByWorkspaceIdOrderByNameAsc(String workspaceId);
     List<Folder> findByWorkspaceIdAndParentId(String workspaceId, String parentId);
+    boolean existsByWorkspaceIdAndParentIdAndNameIgnoreCase(String workspaceId, String parentId, String name);
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router";
 import { useWorkspace } from "../context/workspace-context";
 import { useTheme } from "../context/theme-context";
 import { clearAuthSession, isAdmin } from "../utils/auth";
@@ -105,7 +105,7 @@ export default function AppLayout({ title, subtitle, children, actions }) {
               value={workspaceId || ""}
             >
               {workspaces.length === 0 ? (
-                <option value="">{loading ? "Loading…" : "No workspace"}</option>
+                <option value="">{loading ? "Loadingâ€¦" : "No workspace"}</option>
               ) : (
                 workspaces.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
@@ -139,7 +139,7 @@ export default function AppLayout({ title, subtitle, children, actions }) {
         <div className="sidebar-usage-card">
           <div className="usage-card-heading">
             <span><Icon name="bolt" size={16} /> Credits</span>
-            <strong>{loading ? "—" : Number(credits || 0).toLocaleString()}</strong>
+            <strong>{loading ? "â€”" : Number(credits || 0).toLocaleString()}</strong>
           </div>
           <div className="usage-track" aria-hidden="true">
             <span style={{ width: `${Math.min(100, Math.max(8, Number(credits || 0) / 10))}%` }} />

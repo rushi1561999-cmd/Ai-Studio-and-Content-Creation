@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import api from "../api/axiosConfig";
 import AuthShell from "../components/AuthShell";
 import Icon from "../components/Icon";
@@ -8,7 +8,6 @@ import "./Login.css";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [resetUrl, setResetUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +16,9 @@ export default function ForgotPassword() {
     setLoading(true);
     setError("");
     setMessage("");
-    setResetUrl("");
     try {
       const { data } = await api.post("/auth/forgot-password", { email });
       setMessage(data.message);
-      if (data.resetUrl) setResetUrl(data.resetUrl);
     } catch (requestError) {
       setError(requestError.response?.data?.message || requestError.message || "Request failed.");
     } finally {
@@ -38,12 +35,6 @@ export default function ForgotPassword() {
     >
       {error && <div className="error-message" role="alert">{error}</div>}
       {message && <div className="success-message" role="status">{message}</div>}
-      {resetUrl && (
-        <div className="reset-link-box">
-          <strong>Development reset link</strong>
-          <a href={resetUrl}>{resetUrl}</a>
-        </div>
-      )}
       <form className="auth-form" onSubmit={handleSubmit}>
         <label className="auth-field">
           <span>Email address</span>
@@ -60,7 +51,7 @@ export default function ForgotPassword() {
           </span>
         </label>
         <button className="btn btn-primary auth-submit" disabled={loading} type="submit">
-          {loading ? "Sending…" : "Send reset link"}
+          {loading ? "Sendingâ€¦" : "Send reset link"}
           {!loading && <Icon name="arrowRight" size={17} />}
         </button>
       </form>

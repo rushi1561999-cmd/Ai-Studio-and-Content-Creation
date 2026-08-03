@@ -56,7 +56,7 @@
 
 .asset-form {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(150px, 0.8fr) minmax(120px, 0.45fr) auto;
+  grid-template-columns: minmax(0, 1.4fr) minmax(170px, 0.8fr) auto;
   gap: 9px;
   margin-bottom: 28px;
 }
@@ -96,13 +96,19 @@
   background: var(--bg-hover);
 }
 
-.path-cell {
-  max-width: 240px;
-  overflow: hidden;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.68rem;
+.asset-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   white-space: nowrap;
-  text-overflow: ellipsis;
+}
+
+.version-upload {
+  cursor: pointer;
+}
+
+.version-upload input {
+  display: none;
 }
 
 @media (max-width: 1100px) {

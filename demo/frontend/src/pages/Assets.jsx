@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import AppLayout from "../components/AppLayout";
 import { useWorkspace } from "../context/workspace-context";
@@ -6,53 +5,42 @@ import api from "../api/axiosConfig";
 import "./Assets.css";
 
 export default function Assets() {
-  const { workspaceId, loading: wsLoading } = useWorkspace();
+  const { workspaceId, loading: workspaceLoading } = useWorkspace();
   const [assets, setAssets] = useState([]);
   const [folders, setFolders] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [folderName, setFolderName] = useState("");
-  const [assetForm, setAssetForm] = useState({
-    name: "",
-    mimeType: "text/plain",
-    sizeBytes: 0,
-  });
+  const [selectedFolder, setSelectedFolder] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const load = async () => {
+  const reload = async () => {
     if (!workspaceId) return;
-    setLoading(true);
-    try {
-      const [assetsRes, foldersRes] = await Promise.all([
-        api.get(`/assets/workspace/${workspaceId}`),
-        api.get(`/assets/workspace/${workspaceId}/folders`),
-      ]);
-      setAssets(assetsRes.data);
-      setFolders(foldersRes.data);
-    } catch (err) {
-      setMessage(err.message || "Failed to load assets.");
-    } finally {
-      setLoading(false);
-    }
+    const [assetsResponse, foldersResponse] = await Promise.all([
+      api.get(`/assets/workspace/${workspaceId}`),
+      api.get(`/assets/workspace/${workspaceId}/folders`),
+    ]);
+    setAssets(assetsResponse.data);
+    setFolders(foldersResponse.data);
   };
 
   useEffect(() => {
     if (!workspaceId) return undefined;
     let cancelled = false;
-    Promise.resolve()
-      .then(() => {
-        if (!cancelled) setLoading(true);
-        return Promise.all([
-          api.get(`/assets/workspace/${workspaceId}`),
-          api.get(`/assets/workspace/${workspaceId}/folders`),
-        ]);
-      })
-      .then(([assetsRes, foldersRes]) => {
+    Promise.all([
+      api.get(`/assets/workspace/${workspaceId}`),
+      api.get(`/assets/workspace/${workspaceId}/folders`),
+    ])
+      .then(([assetsResponse, foldersResponse]) => {
         if (cancelled) return;
-        setAssets(assetsRes.data);
-        setFolders(foldersRes.data);
+        setAssets(assetsResponse.data);
+        setFolders(foldersResponse.data);
       })
-      .catch((err) => {
-        if (!cancelled) setMessage(err.message || "Failed to load assets.");
+      .catch((error) => {
+        if (!cancelled) {
+          setMessage(error.response?.data?.message || "Failed to load assets.");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -62,8 +50,8 @@ export default function Assets() {
     };
   }, [workspaceId]);
 
-  const createFolder = async (e) => {
-    e.preventDefault();
+  const createFolder = async (event) => {
+    event.preventDefault();
     if (!folderName.trim() || !workspaceId) return;
     try {
       await api.post(`/assets/workspace/${workspaceId}/folders`, {
@@ -72,40 +60,84 @@ export default function Assets() {
       });
       setFolderName("");
       setMessage("Folder created.");
-      await load();
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Could not create folder.");
+      await reload();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Could not create folder.");
     }
   };
 
-  const registerAsset = async (e) => {
-    e.preventDefault();
-    if (!workspaceId || !assetForm.name.trim()) return;
+  const uploadAsset = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!workspaceId || !selectedFile) return;
+    setUploading(true);
+    setMessage("");
+    const formData = new FormData();
+    formData.append("file", selectedFile);
     try {
-      await api.post("/assets", {
-        workspaceId,
-        folderId: folders[0]?.id || null,
-        name: assetForm.name.trim(),
-        mimeType: assetForm.mimeType,
-        sizeBytes: Number(assetForm.sizeBytes) || 0,
+      const params = new URLSearchParams({ workspaceId });
+      if (selectedFolder) params.set("folderId", selectedFolder);
+      await api.post(`/assets?${params.toString()}`, formData);
+      setSelectedFile(null);
+      form.reset();
+      setMessage("File uploaded and version 1 was recorded.");
+      await reload();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "File upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadVersion = async (asset, file) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post(`/assets/${asset.id}/versions`, formData);
+      setMessage(`A new version of ${asset.name} was uploaded.`);
+      await reload();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Version upload failed.");
+    }
+  };
+
+  const downloadAsset = async (asset) => {
+    try {
+      const response = await api.get(`/assets/${asset.id}/download`, {
+        responseType: "blob",
       });
-      setAssetForm({ name: "", mimeType: "text/plain", sizeBytes: 0 });
-      setMessage("Asset registered.");
-      await load();
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Could not register asset.");
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = asset.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Download failed.");
+    }
+  };
+
+  const deleteAsset = async (asset) => {
+    if (!window.confirm(`Delete ${asset.name} and every stored version?`)) return;
+    try {
+      await api.delete(`/assets/${asset.id}`);
+      setMessage(`${asset.name} was deleted.`);
+      await reload();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Delete failed.");
     }
   };
 
   return (
     <AppLayout
       title="Asset library"
-      subtitle="Keep file metadata and folders organized in one workspace."
+      subtitle="Upload, download, version, and securely remove real workspace files."
     >
       {message && (
-        <div
-          className={`alert ${message.includes("Failed") ? "alert-error" : "alert-success"}`}
-        >
+        <div className={`alert ${/failed|could not/i.test(message) ? "alert-error" : "alert-success"}`}>
           {message}
         </div>
       )}
@@ -116,59 +148,49 @@ export default function Assets() {
           <form className="inline-form" onSubmit={createFolder}>
             <input
               value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
+              onChange={(event) => setFolderName(event.target.value)}
               placeholder="New folder name"
+              maxLength={120}
+              required
             />
-            <button type="submit" className="btn-primary">
-              Add
-            </button>
+            <button type="submit" className="btn-primary">Add</button>
           </form>
           <ul className="folder-list">
             {folders.length === 0 ? (
               <li className="muted">No folders yet</li>
             ) : (
-              folders.map((f) => <li key={f.id}>{f.name}</li>)
+              folders.map((folder) => <li key={folder.id}>{folder.name}</li>)
             )}
           </ul>
         </section>
 
         <section className="card assets-panel assets-main">
-          <h3>Register asset</h3>
-          <form className="asset-form" onSubmit={registerAsset}>
+          <h3>Upload a file</h3>
+          <form className="asset-form" onSubmit={uploadAsset}>
             <input
-              value={assetForm.name}
-              onChange={(e) =>
-                setAssetForm({ ...assetForm, name: e.target.value })
-              }
-              placeholder="File name"
+              type="file"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
               required
             />
-            <input
-              value={assetForm.mimeType}
-              onChange={(e) =>
-                setAssetForm({ ...assetForm, mimeType: e.target.value })
-              }
-              placeholder="MIME type"
-            />
-            <input
-              type="number"
-              value={assetForm.sizeBytes}
-              onChange={(e) =>
-                setAssetForm({ ...assetForm, sizeBytes: e.target.value })
-              }
-              placeholder="Size (bytes)"
-              min={0}
-            />
-            <button type="submit" className="btn-primary">
-              Register
+            <select
+              value={selectedFolder}
+              onChange={(event) => setSelectedFolder(event.target.value)}
+            >
+              <option value="">Workspace root</option>
+              {folders.map((folder) => (
+                <option key={folder.id} value={folder.id}>{folder.name}</option>
+              ))}
+            </select>
+            <button type="submit" className="btn-primary" disabled={uploading}>
+              {uploading ? "Uploading..." : "Upload"}
             </button>
           </form>
 
-          <h3 style={{ marginTop: "1.5rem" }}>Assets</h3>
-          {wsLoading || loading ? (
+          <h3>Stored assets</h3>
+          {workspaceLoading || loading ? (
             <p className="muted">Loading…</p>
           ) : assets.length === 0 ? (
-            <p className="muted">No assets registered.</p>
+            <p className="muted">No files uploaded.</p>
           ) : (
             <table className="assets-table">
               <thead>
@@ -176,16 +198,34 @@ export default function Assets() {
                   <th>Name</th>
                   <th>Type</th>
                   <th>Size</th>
-                  <th>Path</th>
+                  <th>Uploaded</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {assets.map((a) => (
-                  <tr key={a.id}>
-                    <td>{a.name}</td>
-                    <td>{a.mimeType || "—"}</td>
-                    <td>{formatBytes(a.sizeBytes)}</td>
-                    <td className="path-cell">{a.storagePath}</td>
+                {assets.map((asset) => (
+                  <tr key={asset.id}>
+                    <td>{asset.name}</td>
+                    <td>{asset.mimeType || "—"}</td>
+                    <td>{formatBytes(asset.sizeBytes)}</td>
+                    <td>{formatDate(asset.createdAt)}</td>
+                    <td>
+                      <div className="asset-actions">
+                        <button className="btn-small btn-secondary" onClick={() => downloadAsset(asset)} type="button">
+                          Download
+                        </button>
+                        <label className="btn-small btn-secondary version-upload">
+                          New version
+                          <input
+                            type="file"
+                            onChange={(event) => uploadVersion(asset, event.target.files?.[0])}
+                          />
+                        </label>
+                        <button className="btn-small btn-danger" onClick={() => deleteAsset(asset)} type="button">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -199,8 +239,11 @@ export default function Assets() {
 
 function formatBytes(bytes) {
   if (!bytes) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString() : "—";
 }

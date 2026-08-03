@@ -94,7 +94,7 @@ function PromptAssistant({
         </div>
         {assistant?.source && (
           <span className="assistant-source">
-            {assistant.source === "AI" ? "AI enhanced" : "Smart fallback"}
+            {assistant.source === "AI" ? "AI enhanced" : "Rule-based analysis"}
           </span>
         )}
       </div>

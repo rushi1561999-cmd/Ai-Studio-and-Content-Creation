@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.Optional;
@@ -38,12 +40,10 @@ public class UserAccountService {
     private final PromptHistoryRepository promptHistoryRepository;
     private final AiJobRepository aiJobRepository;
     private final JwtService jwtService;
+    private final EmailService emailService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
-
-    @Value("${app.password-reset.expose-token:true}")
-    private boolean exposeResetToken;
 
     public UserAccountService(
             UserRepository userRepository,
@@ -58,7 +58,8 @@ public class UserAccountService {
             PromptRepository promptRepository,
             PromptHistoryRepository promptHistoryRepository,
             AiJobRepository aiJobRepository,
-            JwtService jwtService) {
+            JwtService jwtService,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.resetTokenRepository = resetTokenRepository;
@@ -72,6 +73,7 @@ public class UserAccountService {
         this.promptRepository = promptRepository;
         this.promptHistoryRepository = promptHistoryRepository;
         this.aiJobRepository = aiJobRepository;
+        this.emailService = emailService;
     }
 
     public UserProfileResponse getCurrentUser() {
@@ -104,8 +106,8 @@ public class UserAccountService {
             if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is required.");
             }
-            if (request.getNewPassword().length() < 6) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be at least 6 characters.");
+            if (request.getNewPassword().length() < 10) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be at least 10 characters.");
             }
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect.");
@@ -164,25 +166,23 @@ public class UserAccountService {
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return new PasswordResetResponse(genericMessage, null);
+            return new PasswordResetResponse(genericMessage);
         }
 
         User user = userOpt.get();
         resetTokenRepository.deleteByUserId(user.getId());
 
+        String rawToken = generateSecureToken();
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUserId(user.getId());
-        resetToken.setToken(generateSecureToken());
+        resetToken.setToken(hashResetToken(rawToken));
         resetToken.setExpiresAt(LocalDateTime.now().plusHours(RESET_EXPIRY_HOURS));
         resetTokenRepository.save(resetToken);
 
-        String resetUrl = frontendUrl + "/reset-password?token=" + resetToken.getToken();
-        System.out.println("[Password reset] " + email + " -> " + resetUrl);
+        String resetUrl = frontendUrl + "/reset-password?token=" + rawToken;
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), resetUrl);
 
-        if (exposeResetToken) {
-            return new PasswordResetResponse(genericMessage, resetUrl);
-        }
-        return new PasswordResetResponse(genericMessage, null);
+        return new PasswordResetResponse(genericMessage);
     }
 
     @Transactional
@@ -190,12 +190,12 @@ public class UserAccountService {
         if (request.getToken() == null || request.getToken().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is required.");
         }
-        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters.");
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 10 characters.");
         }
 
         PasswordResetToken resetToken = resetTokenRepository
-                .findByTokenAndUsedFalse(request.getToken().trim())
+                .findByTokenAndUsedFalse(hashResetToken(request.getToken().trim()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token."));
 
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -274,5 +274,15 @@ public class UserAccountService {
         byte[] bytes = new byte[RESET_TOKEN_BYTES];
         new SecureRandom().nextBytes(bytes);
         return HexFormat.of().formatHex(bytes);
+    }
+
+    private String hashResetToken(String rawToken) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Password reset token could not be protected.", exception);
+        }
     }
 }

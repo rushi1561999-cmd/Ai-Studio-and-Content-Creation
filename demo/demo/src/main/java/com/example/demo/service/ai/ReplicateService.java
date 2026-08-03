@@ -2,16 +2,18 @@ package com.example.demo.service.ai;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class ReplicateService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReplicateService.class);
 
     private static final String FLUX_PREDICTIONS =
             "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions";
@@ -20,9 +22,6 @@ public class ReplicateService {
 
     @Value("${replicate.api.token:}")
     private String apiToken;
-
-    @Value("${ai.image.fallback.enabled:true}")
-    private boolean imageFallbackEnabled;
 
     private final RestTemplate restTemplate;
 
@@ -45,17 +44,11 @@ public class ReplicateService {
                     return GenerationResult.okMedia(url);
                 }
             } catch (Exception e) {
-                System.err.println("Replicate image failed: " + e.getMessage());
+                log.warn("Replicate image generation failed", e);
             }
         }
 
-        if (imageFallbackEnabled) {
-            return GenerationResult.okMedia(buildPollinationsUrl(prompt));
-        }
-
-        return GenerationResult.fail(
-                "Image generation requires replicate.api.token or enable ai.image.fallback.enabled."
-        );
+        return GenerationResult.fail("Image generation requires a working Replicate provider connection.");
     }
 
     public GenerationResult generateVideo(String prompt) {
@@ -103,7 +96,7 @@ public class ReplicateService {
 
         for (int i = 0; i < 90; i++) {
             Thread.sleep(2000);
-                ResponseEntity<Map> pollRes = restTemplate.exchange(
+            ResponseEntity<Map> pollRes = restTemplate.exchange(
                     pollUrl, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
             Map<String, Object> poll = pollRes.getBody();
             if (poll == null) {
@@ -142,10 +135,5 @@ public class ReplicateService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiToken.trim());
         return headers;
-    }
-
-    private String buildPollinationsUrl(String prompt) {
-        String encoded = URLEncoder.encode(prompt, StandardCharsets.UTF_8);
-        return "https://image.pollinations.ai/prompt/" + encoded + "?width=1024&height=1024&nologo=true";
     }
 }

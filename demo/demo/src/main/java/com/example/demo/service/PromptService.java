@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class PromptService {
@@ -39,24 +41,25 @@ public class PromptService {
         workspaceAccessService.requireWorkspaceAccess(request.getWorkspaceId());
         // 1. Find User
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found."));
 
         // 2. Find Workspace
         Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
-                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workspace not found."));
 
         // 3. Find or Create Category
-        Category category = categoryRepository.findByName(request.getCategoryName())
+        String categoryName = request.getCategoryName().trim();
+        Category category = categoryRepository.findByName(categoryName)
                 .orElseGet(() -> {
                     Category newCategory = new Category();
-                    newCategory.setName(request.getCategoryName());
+                    newCategory.setName(categoryName);
                     return categoryRepository.save(newCategory);
                 });
 
         // 4. Create and Save Prompt
         Prompt prompt = new Prompt();
-        prompt.setTitle(request.getTitle());
-        prompt.setContent(request.getContent());
+        prompt.setTitle(request.getTitle().trim());
+        prompt.setContent(request.getContent().trim());
         prompt.setCategory(category);
         prompt.setWorkspace(workspace);
         prompt.setCreatedBy(user);

@@ -4,9 +4,9 @@ services:
     container_name: aistudio-mysql
     environment:
       MYSQL_DATABASE: cdac
-      MYSQL_USER: ${MYSQL_USER:-demo}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-demopass}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-only}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
     ports:
       - "3307:3306"
     volumes:
@@ -22,8 +22,8 @@ services:
     image: rabbitmq:4.1-management-alpine
     container_name: aistudio-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-aistudio}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local-rabbit-only}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -57,22 +57,37 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cdac
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-demo}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-demopass}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      RAZORPAY_API_KEY: ${RAZORPAY_API_KEY:-}
+      RAZORPAY_API_SECRET: ${RAZORPAY_API_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      APP_EMAIL_ENABLED: ${APP_EMAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      APP_ADMIN_SEED_ENABLED: ${APP_ADMIN_SEED_ENABLED:-false}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_ADMIN_NAME: ${APP_ADMIN_NAME:-Platform Admin}
       APP_FRONTEND_URL: http://localhost:3000
       CORS_ALLOWED_ORIGINS: http://localhost:3000
       AI_PROCESSING_RABBITMQ: "true"
-      RABBITMQ_ADDRESSES: amqp://${RABBITMQ_USER:-aistudio}:${RABBITMQ_PASSWORD:-local-rabbit-only}@rabbitmq:5672
+      RABBITMQ_ADDRESSES: amqp://${RABBITMQ_USER:?Set RABBITMQ_USER in .env}:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}@rabbitmq:5672
       REDIS_HOST: redis
       APP_CACHE_PROVIDER: redis
       PROMPT_REDIS_RATE_LIMIT_ENABLED: "true"
       AI_JOB_STREAM_REDIS_ENABLED: "true"
       DB_POOL_MAX_SIZE: 20
+      APP_STORAGE_ROOT: /app/data/assets
+    volumes:
+      - asset_data:/app/data/assets
     depends_on:
       mysql:
         condition: service_healthy
@@ -130,3 +145,4 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+  asset_data:

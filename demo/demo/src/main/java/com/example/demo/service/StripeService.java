@@ -3,13 +3,16 @@ package com.example.demo.service;
 import com.example.demo.dto.StripeCheckoutResponse;
 import com.example.demo.entity.Payment;
 import com.example.demo.entity.StripePayment;
+import com.example.demo.entity.Subscription;
+import com.example.demo.entity.SubscriptionPlan;
 import com.example.demo.enums.CreditPack;
-import com.example.demo.enums.CreditTransactionType;
 import com.example.demo.enums.PaymentProvider;
 import com.example.demo.enums.PaymentStatus;
 import com.example.demo.repository.PaymentRepository;
 import com.example.demo.repository.StripePaymentRepository;
-import com.example.demo.service.billing.WalletBillingService;
+import com.example.demo.repository.SubscriptionPlanRepository;
+import com.example.demo.repository.SubscriptionRepository;
+import com.example.demo.service.billing.PaymentFulfillmentService;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
@@ -24,13 +27,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Locale;
+
 @Service
 public class StripeService {
 
-    private final WalletBillingService walletBillingService;
+    private final PaymentFulfillmentService paymentFulfillmentService;
     private final StripePaymentRepository stripePaymentRepository;
     private final PaymentRepository paymentRepository;
     private final WorkspaceAccessService workspaceAccessService;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     @Value("${stripe.api.key:}")
     private String stripeApiKey;
@@ -42,14 +49,18 @@ public class StripeService {
     private String frontendUrl;
 
     public StripeService(
-            WalletBillingService walletBillingService,
+            PaymentFulfillmentService paymentFulfillmentService,
             StripePaymentRepository stripePaymentRepository,
             PaymentRepository paymentRepository,
-            WorkspaceAccessService workspaceAccessService) {
-        this.walletBillingService = walletBillingService;
+            WorkspaceAccessService workspaceAccessService,
+            SubscriptionRepository subscriptionRepository,
+            SubscriptionPlanRepository subscriptionPlanRepository) {
+        this.paymentFulfillmentService = paymentFulfillmentService;
         this.stripePaymentRepository = stripePaymentRepository;
         this.paymentRepository = paymentRepository;
         this.workspaceAccessService = workspaceAccessService;
+        this.subscriptionRepository = subscriptionRepository;
+        this.subscriptionPlanRepository = subscriptionPlanRepository;
     }
 
     @PostConstruct
@@ -60,49 +71,56 @@ public class StripeService {
     }
 
     public boolean isConfigured() {
-        return stripeApiKey != null && !stripeApiKey.isBlank();
+        return stripeApiKey != null && !stripeApiKey.isBlank()
+                && webhookSecret != null && !webhookSecret.isBlank();
     }
 
-    public StripeCheckoutResponse createCheckoutSession(String workspaceId, String packId) {
+    public StripeCheckoutResponse createCheckoutSession(
+            String workspaceId,
+            String packId,
+            String subscriptionId) {
         requireConfigured();
         workspaceAccessService.requireWorkspaceAccess(workspaceId);
-
-        CreditPack pack = CreditPack.fromId(packId);
+        ChargeDetails charge = resolveCharge(workspaceId, packId, subscriptionId);
 
         try {
-            SessionCreateParams params = SessionCreateParams.builder()
+            SessionCreateParams.Builder builder = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
-                    .setSuccessUrl(frontendUrl + "/wallet?payment=success")
+                    .setSuccessUrl(frontendUrl + "/wallet?payment=success&session_id={CHECKOUT_SESSION_ID}")
                     .setCancelUrl(frontendUrl + "/wallet?payment=cancelled")
                     .putMetadata("workspaceId", workspaceId)
-                    .putMetadata("credits", String.valueOf(pack.getCredits()))
-                    .putMetadata("pack", pack.getId())
-                    .addLineItem(
-                            SessionCreateParams.LineItem.builder()
-                                    .setQuantity(1L)
-                                    .setPriceData(
-                                            SessionCreateParams.LineItem.PriceData.builder()
-                                                    .setCurrency("usd")
-                                                    .setUnitAmount(pack.getPriceCents())
-                                                    .setProductData(
-                                                            SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                    .setName(pack.getLabel())
-                                                                    .build()
-                                                    )
-                                                    .build()
-                                    )
-                                    .build()
-                    )
-                    .build();
+                    .putMetadata("credits", String.valueOf(charge.credits()))
+                    .putMetadata("purchaseType", charge.subscriptionId() == null ? "CREDIT_PACK" : "SUBSCRIPTION")
+                    .addLineItem(SessionCreateParams.LineItem.builder()
+                            .setQuantity(1L)
+                            .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                    .setCurrency(charge.currency().toLowerCase(Locale.ROOT))
+                                    .setUnitAmount((long) charge.amountMinor())
+                                    .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                            .setName(charge.description())
+                                            .build())
+                                    .build())
+                            .build());
+            if (charge.subscriptionId() != null) {
+                builder.putMetadata("subscriptionId", charge.subscriptionId());
+            }
 
-            Session session = Session.create(params);
+            Session session = Session.create(builder.build());
+
+            Payment payment = new Payment();
+            payment.setWorkspaceId(workspaceId);
+            payment.setSubscriptionId(charge.subscriptionId());
+            payment.setAmountCents(charge.amountMinor());
+            payment.setCurrency(charge.currency());
+            payment.setProvider(PaymentProvider.STRIPE);
+            payment.setExternalId(session.getId());
+            payment.setStatus(PaymentStatus.PENDING);
+            payment.setCreditsGranted(charge.credits());
+            paymentRepository.save(payment);
+
             return new StripeCheckoutResponse(session.getUrl(), session.getId());
-
-        } catch (StripeException e) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_GATEWAY,
-                    "Stripe checkout failed: " + e.getMessage()
-            );
+        } catch (StripeException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe checkout could not be created.");
         }
     }
 
@@ -110,71 +128,97 @@ public class StripeService {
     public void handleWebhook(String payload, String signatureHeader) {
         requireConfigured();
 
-        if (webhookSecret == null || webhookSecret.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "Stripe webhook secret is not configured."
-            );
-        }
-
         Event event;
         try {
             event = Webhook.constructEvent(payload, signatureHeader, webhookSecret.trim());
-        } catch (SignatureVerificationException e) {
+        } catch (SignatureVerificationException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Stripe signature.");
         }
 
-        if (!"checkout.session.completed".equals(event.getType())) {
+        if ("checkout.session.async_payment_failed".equals(event.getType())) {
+            sessionFrom(event).ifPresent(session -> paymentFulfillmentService.markFailed(
+                    PaymentProvider.STRIPE,
+                    session.getId(),
+                    session.getPaymentIntent()));
+            return;
+        }
+        if (!"checkout.session.completed".equals(event.getType())
+                && !"checkout.session.async_payment_succeeded".equals(event.getType())) {
             return;
         }
 
-        Session session = (Session) event.getDataObjectDeserializer()
-                .getObject()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid session payload."));
-
+        Session session = sessionFrom(event)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Stripe session payload."));
         if (!"paid".equals(session.getPaymentStatus())) {
             return;
         }
-
-        if (stripePaymentRepository.existsById(session.getId())) {
-            return;
+        if (session.getAmountTotal() == null || session.getCurrency() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stripe payment totals are missing.");
         }
 
-        String workspaceId = session.getMetadata().get("workspaceId");
-        String creditsStr = session.getMetadata().get("credits");
+        Payment payment = paymentFulfillmentService.fulfill(
+                PaymentProvider.STRIPE,
+                session.getId(),
+                session.getPaymentIntent(),
+                Math.toIntExact(session.getAmountTotal()),
+                session.getCurrency());
 
-        if (workspaceId == null || creditsStr == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing payment metadata.");
+        if (!stripePaymentRepository.existsById(session.getId())) {
+            StripePayment stripePayment = new StripePayment();
+            stripePayment.setSessionId(session.getId());
+            stripePayment.setWorkspaceId(payment.getWorkspaceId());
+            stripePayment.setCredits(payment.getCreditsGranted());
+            stripePaymentRepository.save(stripePayment);
         }
+    }
 
-        int credits = Integer.parseInt(creditsStr);
-        int amountCents = session.getAmountTotal() != null ? session.getAmountTotal().intValue() : 0;
+    private java.util.Optional<Session> sessionFrom(Event event) {
+        return event.getDataObjectDeserializer().getObject()
+                .filter(Session.class::isInstance)
+                .map(Session.class::cast);
+    }
 
-        walletBillingService.credit(workspaceId, credits, CreditTransactionType.PURCHASE,
-                session.getId(), "Stripe credit purchase");
-
-        Payment payment = new Payment();
-        payment.setWorkspaceId(workspaceId);
-        payment.setAmountCents(amountCents);
-        payment.setProvider(PaymentProvider.STRIPE);
-        payment.setExternalId(session.getId());
-        payment.setStatus(PaymentStatus.COMPLETED);
-        payment.setCreditsGranted(credits);
-        paymentRepository.save(payment);
-
-        StripePayment stripePayment = new StripePayment();
-        stripePayment.setSessionId(session.getId());
-        stripePayment.setWorkspaceId(workspaceId);
-        stripePayment.setCredits(credits);
-        stripePaymentRepository.save(stripePayment);
+    private ChargeDetails resolveCharge(String workspaceId, String packId, String subscriptionId) {
+        if (subscriptionId != null && !subscriptionId.isBlank()) {
+            Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription not found."));
+            if (!workspaceId.equals(subscription.getWorkspaceId()) || !"PENDING".equals(subscription.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Subscription is not awaiting payment for this workspace.");
+            }
+            SubscriptionPlan plan = subscriptionPlanRepository.findById(subscription.getPlanId())
+                    .filter(SubscriptionPlan::isActive)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription plan not found."));
+            return new ChargeDetails(
+                    plan.getPriceCents(),
+                    plan.getCurrency(),
+                    plan.getMonthlyCredits(),
+                    plan.getName() + " — 30-day plan",
+                    subscription.getId());
+        }
+        if (packId == null || packId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Credit pack or subscription is required.");
+        }
+        CreditPack pack = CreditPack.fromId(packId);
+        return new ChargeDetails(
+                Math.toIntExact(pack.getPriceCents()),
+                CreditPack.CURRENCY,
+                pack.getCredits(),
+                pack.getLabel(),
+                null);
     }
 
     private void requireConfigured() {
         if (!isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Stripe is not configured. Set stripe.api.key in application-local.properties."
-            );
+                    "Stripe checkout is unavailable until both API and webhook secrets are configured.");
         }
     }
+
+    private record ChargeDetails(
+            int amountMinor,
+            String currency,
+            int credits,
+            String description,
+            String subscriptionId) {}
 }

@@ -4,11 +4,16 @@ import com.example.demo.enums.PaymentProvider;
 import com.example.demo.enums.PaymentStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(
+        name = "payments",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_payment_provider_external",
+                columnNames = {"provider", "external_id"}))
 public class Payment {
 
     @Id
@@ -17,6 +22,9 @@ public class Payment {
 
     @Column(name = "workspace_id", nullable = false)
     private String workspaceId;
+
+    @Column(name = "subscription_id")
+    private String subscriptionId;
 
     @Column(name = "amount_cents", nullable = false)
     private int amountCents;
@@ -31,6 +39,9 @@ public class Payment {
     @Column(name = "external_id")
     private String externalId;
 
+    @Column(name = "provider_payment_id")
+    private String providerPaymentId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;
@@ -42,11 +53,18 @@ public class Payment {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
+
+    public String getSubscriptionId() { return subscriptionId; }
+    public void setSubscriptionId(String subscriptionId) { this.subscriptionId = subscriptionId; }
 
     public int getAmountCents() { return amountCents; }
     public void setAmountCents(int amountCents) { this.amountCents = amountCents; }
@@ -60,6 +78,9 @@ public class Payment {
     public String getExternalId() { return externalId; }
     public void setExternalId(String externalId) { this.externalId = externalId; }
 
+    public String getProviderPaymentId() { return providerPaymentId; }
+    public void setProviderPaymentId(String providerPaymentId) { this.providerPaymentId = providerPaymentId; }
+
     public PaymentStatus getStatus() { return status; }
     public void setStatus(PaymentStatus status) { this.status = status; }
 
@@ -68,4 +89,7 @@ public class Payment {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

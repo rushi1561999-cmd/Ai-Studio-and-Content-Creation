@@ -51,6 +51,7 @@ public class MarketplaceService {
                 request.getCategory() != null && !request.getCategory().isBlank()
                         ? request.getCategory()
                         : "Community");
+        post.setCategory(post.getCategory().trim());
         post.setAuthorName(resolveDisplayName(user));
         post.setLikes(0);
 

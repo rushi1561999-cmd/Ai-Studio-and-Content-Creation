@@ -25,8 +25,9 @@ public class StripeController {
     @PostMapping("/checkout")
     public ResponseEntity<StripeCheckoutResponse> checkout(
             @RequestParam String workspaceId,
-            @RequestParam String pack) {
-        return ResponseEntity.ok(stripeService.createCheckoutSession(workspaceId, pack));
+            @RequestParam(required = false) String pack,
+            @RequestParam(required = false) String subscriptionId) {
+        return ResponseEntity.ok(stripeService.createCheckoutSession(workspaceId, pack, subscriptionId));
     }
 
     @PostMapping("/webhook")

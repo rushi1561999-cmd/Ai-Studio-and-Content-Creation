@@ -6,7 +6,9 @@ import com.example.demo.dto.AdminUserResponse;
 import com.example.demo.dto.UpdateUserRoleRequest;
 import com.example.demo.entity.*;
 import com.example.demo.enums.PlatformRole;
+import com.example.demo.enums.CreditTransactionType;
 import com.example.demo.repository.*;
+import com.example.demo.service.billing.WalletBillingService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ public class AdminService {
     private final SavedPromptRepository savedPromptRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final WalletBillingService walletBillingService;
 
     public AdminService(
             UserRepository userRepository,
@@ -45,7 +49,9 @@ public class AdminService {
             CommentRepository commentRepository,
             SavedPromptRepository savedPromptRepository,
             WorkspaceMemberRepository workspaceMemberRepository,
-            SubscriptionPlanRepository subscriptionPlanRepository) {
+            SubscriptionPlanRepository subscriptionPlanRepository,
+            SubscriptionRepository subscriptionRepository,
+            WalletBillingService walletBillingService) {
         this.userRepository = userRepository;
         this.workspaceRepository = workspaceRepository;
         this.marketplacePostRepository = marketplacePostRepository;
@@ -59,6 +65,8 @@ public class AdminService {
         this.savedPromptRepository = savedPromptRepository;
         this.workspaceMemberRepository = workspaceMemberRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.walletBillingService = walletBillingService;
     }
 
     @Transactional(readOnly = true)
@@ -153,22 +161,24 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
 
-        if (amount <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be positive.");
+        if (amount <= 0 || amount > 100_000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be between 1 and 100000 credits.");
+        }
+        String reason = description == null ? "" : description.trim();
+        if (reason.isBlank() || reason.length() > 240) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A reason of 1 to 240 characters is required.");
         }
 
-        // Get user's workspace (assuming first workspace or create one)
-        Workspace workspace = workspaceRepository.findAll().stream()
-                .filter(ws -> workspaceMemberRepository.existsByUser_IdAndWorkspace_Id(user.getId(), ws.getId()))
-                .findFirst()
+        Workspace workspace = workspaceMemberRepository.findFirstByUser_IdOrderByJoinedAtAsc(user.getId())
+                .map(WorkspaceMember::getWorkspace)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User has no workspace."));
 
-        // Add credits to the workspace wallet
-        Wallet wallet = walletRepository.findById(workspace.getId())
-                .orElse(new Wallet(workspace.getId(), 0));
-
-        wallet.setCredits(wallet.getCredits() + amount);
-        return walletRepository.save(wallet);
+        return walletBillingService.credit(
+                workspace.getId(),
+                amount,
+                CreditTransactionType.ADJUSTMENT,
+                "admin:" + user.getId(),
+                reason);
     }
 
     @Transactional(readOnly = true)
@@ -181,15 +191,25 @@ public class AdminService {
         if (plan.getCode() == null || plan.getCode().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plan code is required.");
         }
-        if (subscriptionPlanRepository.findByCode(plan.getCode()).isPresent()) {
+        String normalizedCode = plan.getCode().trim().toLowerCase();
+        if (subscriptionPlanRepository.findByCode(normalizedCode).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plan code already exists.");
         }
         if (plan.getCurrency() == null || plan.getCurrency().trim().isEmpty()) {
-            plan.setCurrency("USD");
+            plan.setCurrency("INR");
         }
+        plan.setCurrency(plan.getCurrency().trim().toUpperCase());
         if (!plan.getCurrency().equals("USD") && !plan.getCurrency().equals("INR")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency must be USD or INR.");
         }
+        if (plan.getName() == null || plan.getName().isBlank() || plan.getName().length() > 120) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plan name must contain 1 to 120 characters.");
+        }
+        if (plan.getMonthlyCredits() <= 0 || plan.getPriceCents() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Paid plans require positive credits and price.");
+        }
+        plan.setCode(normalizedCode);
+        plan.setName(plan.getName().trim());
         return subscriptionPlanRepository.save(plan);
     }
 
@@ -199,11 +219,12 @@ public class AdminService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan not found."));
 
         if (plan.getCode() != null && !plan.getCode().trim().isEmpty()) {
-            if (!existing.getCode().equals(plan.getCode()) &&
-                subscriptionPlanRepository.findByCode(plan.getCode()).isPresent()) {
+            String normalizedCode = plan.getCode().trim().toLowerCase();
+            if (!existing.getCode().equals(normalizedCode) &&
+                subscriptionPlanRepository.findByCode(normalizedCode).isPresent()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Plan code already exists.");
             }
-            existing.setCode(plan.getCode());
+            existing.setCode(normalizedCode);
         }
 
         if (plan.getName() != null) {
@@ -216,10 +237,11 @@ public class AdminService {
             existing.setPriceCents(plan.getPriceCents());
         }
         if (plan.getCurrency() != null && !plan.getCurrency().trim().isEmpty()) {
-            if (!plan.getCurrency().equals("USD") && !plan.getCurrency().equals("INR")) {
+            String currency = plan.getCurrency().trim().toUpperCase();
+            if (!currency.equals("USD") && !currency.equals("INR")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Currency must be USD or INR.");
             }
-            existing.setCurrency(plan.getCurrency());
+            existing.setCurrency(currency);
         }
         existing.setActive(plan.isActive());
 
@@ -230,6 +252,9 @@ public class AdminService {
     public void deleteSubscriptionPlan(String planId) {
         if (!subscriptionPlanRepository.existsById(planId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan not found.");
+        }
+        if (subscriptionRepository.existsByPlanId(planId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Deactivate plans that have subscription history instead of deleting them.");
         }
         subscriptionPlanRepository.deleteById(planId);
     }

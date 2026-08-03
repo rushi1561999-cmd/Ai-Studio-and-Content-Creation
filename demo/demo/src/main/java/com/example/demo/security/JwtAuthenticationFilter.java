@@ -55,8 +55,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = authHeader.substring(7);
             String userEmail = jwtService.extractEmail(jwt);
-            System.out.println("JWT Filter: Processing token for email: " + userEmail);
-
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtService.isTokenValid(jwt, userEmail)) {
                     List<SimpleGrantedAuthority> authorities = new ArrayList<>();
@@ -70,13 +68,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println("JWT Filter: Successfully authenticated user: " + userEmail);
-                } else {
-                    System.out.println("JWT Filter: Token validation failed for email: " + userEmail);
                 }
             }
-        } catch (Exception e) {
-            System.out.println("JWT Filter: Exception processing token: " + e.getMessage());
+        } catch (Exception ignored) {
             // Invalid or expired token
         }
 

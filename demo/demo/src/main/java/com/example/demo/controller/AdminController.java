@@ -14,6 +14,7 @@ import com.example.demo.service.WorkspaceAccessService;
 import com.example.demo.service.admin.AdminService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,7 @@ public class AdminController {
     @PatchMapping("/users/{userId}/role")
     public ResponseEntity<AdminUserResponse> updateRole(
             @PathVariable String userId,
-            @RequestBody UpdateUserRoleRequest request) {
+            @Valid @RequestBody UpdateUserRoleRequest request) {
         return ResponseEntity.ok(adminService.updateUserRole(userId, request));
     }
 
@@ -100,7 +101,7 @@ public class AdminController {
     @PostMapping("/users/{userId}/add-credits")
     public ResponseEntity<com.example.demo.entity.Wallet> addCredits(
             @PathVariable String userId,
-            @RequestBody com.example.demo.dto.AddCreditsRequest request) {
+            @Valid @RequestBody com.example.demo.dto.AddCreditsRequest request) {
         return ResponseEntity.ok(adminService.addUserCredits(userId, request.getAmount(), request.getDescription()));
     }
 

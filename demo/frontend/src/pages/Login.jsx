@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import api from "../api/axiosConfig";
 import AuthShell from "../components/AuthShell";
 import Icon from "../components/Icon";
@@ -76,7 +76,7 @@ export default function Login() {
         </label>
 
         <button className="btn btn-primary auth-submit" disabled={isLoading} type="submit">
-          {isLoading ? "Signing in…" : "Sign in"}
+          {isLoading ? "Signing inâ€¦" : "Sign in"}
           {!isLoading && <Icon name="arrowRight" size={17} />}
         </button>
       </form>
