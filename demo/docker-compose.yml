@@ -12,7 +12,11 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD",
+        ]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -61,7 +65,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent}
+
       REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
+      REPLICATE_IMAGE_PREDICTIONS_URL: ${REPLICATE_IMAGE_PREDICTIONS_URL:-https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions}
+      REPLICATE_VIDEO_PREDICTIONS_URL: ${REPLICATE_VIDEO_PREDICTIONS_URL:-https://api.replicate.com/v1/models/minimax/video-01/predictions}
+
+      AI_PROVIDER_CONNECT_TIMEOUT: ${AI_PROVIDER_CONNECT_TIMEOUT:-10s}
+      AI_PROVIDER_READ_TIMEOUT: ${AI_PROVIDER_READ_TIMEOUT:-60s}
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       RAZORPAY_API_KEY: ${RAZORPAY_API_KEY:-}
@@ -96,7 +107,15 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8081/actuator/health/readiness"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "-O",
+          "-",
+          "http://localhost:8081/actuator/health/readiness",
+        ]
       interval: 15s
       timeout: 5s
       retries: 8

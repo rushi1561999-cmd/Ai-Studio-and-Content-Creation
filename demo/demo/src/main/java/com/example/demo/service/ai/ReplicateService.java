@@ -1,10 +1,15 @@
 package com.example.demo.service.ai;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -13,15 +18,27 @@ import java.util.Map;
 @Service
 public class ReplicateService {
 
-    private static final Logger log = LoggerFactory.getLogger(ReplicateService.class);
-
-    private static final String FLUX_PREDICTIONS =
-            "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions";
-    private static final String VIDEO_PREDICTIONS =
-            "https://api.replicate.com/v1/models/anotherjesse/zeroscope-v2-xl/predictions";
+    private static final Logger log =
+            LoggerFactory.getLogger(ReplicateService.class);
 
     @Value("${replicate.api.token:}")
     private String apiToken;
+
+    @Value("${replicate.image.predictions-url:"
+            + "https://api.replicate.com/v1/models/"
+            + "black-forest-labs/flux-schnell/predictions}")
+    private String imagePredictionsUrl;
+
+    @Value("${replicate.video.predictions-url:"
+            + "https://api.replicate.com/v1/models/"
+            + "minimax/video-01/predictions}")
+    private String videoPredictionsUrl;
+
+    @Value("${replicate.poll.max-attempts:300}")
+    private int maxPollAttempts;
+
+    @Value("${replicate.poll.interval-ms:2000}")
+    private long pollIntervalMs;
 
     private final RestTemplate restTemplate;
 
@@ -34,106 +51,367 @@ public class ReplicateService {
     }
 
     public GenerationResult generateImage(String prompt) {
-        if (isConfigured()) {
-            try {
-                String url = runModelPrediction(FLUX_PREDICTIONS, Map.of(
-                        "prompt", prompt,
-                        "num_outputs", 1
-                ));
-                if (url != null) {
-                    return GenerationResult.okMedia(url);
-                }
-            } catch (Exception e) {
-                log.warn("Replicate image generation failed", e);
-            }
+        if (!isConfigured()) {
+            return GenerationResult.fail(
+                    "REPLICATE_API_TOKEN is missing from the backend container."
+            );
         }
 
-        return GenerationResult.fail("Image generation requires a working Replicate provider connection.");
+        if (prompt == null || prompt.isBlank()) {
+            return GenerationResult.fail(
+                    "An image-generation prompt is required."
+            );
+        }
+
+        try {
+            Map<String, Object> input = Map.of(
+                    "prompt", prompt.trim(),
+                    "num_outputs", 1,
+                    "output_format", "webp"
+            );
+
+            String mediaUrl = runModelPrediction(
+                    imagePredictionsUrl,
+                    input
+            );
+
+            if (mediaUrl == null || mediaUrl.isBlank()) {
+                return GenerationResult.fail(
+                        "Replicate image generation returned no output URL."
+                );
+            }
+
+            return GenerationResult.okMedia(mediaUrl);
+
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+
+            log.warn("Replicate image generation was interrupted", exception);
+
+            return GenerationResult.fail(
+                    "Image generation was interrupted."
+            );
+
+        } catch (Exception exception) {
+            String providerError = extractProviderError(exception);
+
+            log.warn(
+                    "Replicate image generation failed: {}",
+                    providerError,
+                    exception
+            );
+
+            return GenerationResult.fail(
+                    "Image generation failed: " + providerError
+            );
+        }
     }
 
     public GenerationResult generateVideo(String prompt) {
         if (!isConfigured()) {
             return GenerationResult.fail(
-                    "Video generation requires replicate.api.token in application.properties."
+                    "REPLICATE_API_TOKEN is missing from the backend container."
+            );
+        }
+
+        if (prompt == null || prompt.isBlank()) {
+            return GenerationResult.fail(
+                    "A video-generation prompt is required."
             );
         }
 
         try {
-            String url = runModelPrediction(VIDEO_PREDICTIONS, Map.of("prompt", prompt));
-            if (url != null) {
-                return GenerationResult.okMedia(url);
+            Map<String, Object> input = Map.of(
+                    "prompt", prompt.trim()
+            );
+
+            String mediaUrl = runModelPrediction(
+                    videoPredictionsUrl,
+                    input
+            );
+
+            if (mediaUrl == null || mediaUrl.isBlank()) {
+                return GenerationResult.fail(
+                        "Replicate video generation returned no output URL."
+                );
             }
-            return GenerationResult.fail("Video generation returned no output URL.");
-        } catch (Exception e) {
-            return GenerationResult.fail("Video generation failed: " + e.getMessage());
+
+            return GenerationResult.okMedia(mediaUrl);
+
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+
+            log.warn("Replicate video generation was interrupted", exception);
+
+            return GenerationResult.fail(
+                    "Video generation was interrupted."
+            );
+
+        } catch (Exception exception) {
+            String providerError = extractProviderError(exception);
+
+            log.warn(
+                    "Replicate video generation failed: {}",
+                    providerError,
+                    exception
+            );
+
+            return GenerationResult.fail(
+                    "Video generation failed: " + providerError
+            );
         }
     }
 
     @SuppressWarnings("unchecked")
-    private String runModelPrediction(String endpoint, Map<String, Object> input) throws InterruptedException {
+    private String runModelPrediction(
+            String endpoint,
+            Map<String, Object> input) throws InterruptedException {
+
         HttpHeaders headers = authHeaders();
-        Map<String, Object> body = Map.of("input", input);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<Map> createRes = restTemplate.postForEntity(endpoint, request, Map.class);
-        Map<String, Object> created = createRes.getBody();
-        if (created == null) {
-            return null;
+        Map<String, Object> requestBody = Map.of(
+                "input", input
+        );
+
+        HttpEntity<Map<String, Object>> request =
+                new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<Map> createResponse =
+                restTemplate.postForEntity(
+                        endpoint,
+                        request,
+                        Map.class
+                );
+
+        Map<String, Object> prediction = createResponse.getBody();
+
+        if (prediction == null) {
+            throw new IllegalStateException(
+                    "Replicate returned an empty prediction response."
+            );
         }
 
-        String pollUrl = created.get("urls") instanceof Map<?, ?> urls
-                ? String.valueOf(((Map<String, Object>) urls).get("get"))
-                : null;
-        if (pollUrl == null || "null".equals(pollUrl)) {
-            pollUrl = created.get("id") != null
-                    ? "https://api.replicate.com/v1/predictions/" + created.get("id")
-                    : null;
+        String initialStatus =
+                String.valueOf(prediction.get("status"));
+
+        if ("succeeded".equalsIgnoreCase(initialStatus)) {
+            String outputUrl =
+                    extractOutputUrl(prediction.get("output"));
+
+            if (outputUrl != null) {
+                return outputUrl;
+            }
         }
 
-        if (pollUrl == null) {
-            return null;
+        if ("failed".equalsIgnoreCase(initialStatus)
+                || "canceled".equalsIgnoreCase(initialStatus)) {
+
+            throwPredictionFailure(prediction, initialStatus);
         }
 
-        for (int i = 0; i < 90; i++) {
-            Thread.sleep(2000);
-            ResponseEntity<Map> pollRes = restTemplate.exchange(
-                    pollUrl, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
-            Map<String, Object> poll = pollRes.getBody();
-            if (poll == null) {
+        String pollUrl = extractPollUrl(prediction);
+
+        if (pollUrl == null || pollUrl.isBlank()) {
+            throw new IllegalStateException(
+                    "Replicate did not return a prediction polling URL."
+            );
+        }
+
+        int attempts = Math.max(maxPollAttempts, 1);
+        long interval = Math.max(pollIntervalMs, 500L);
+
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            Thread.sleep(interval);
+
+            ResponseEntity<Map> pollResponse =
+                    restTemplate.exchange(
+                            pollUrl,
+                            HttpMethod.GET,
+                            new HttpEntity<Void>(headers),
+                            Map.class
+                    );
+
+            Map<String, Object> currentPrediction =
+                    pollResponse.getBody();
+
+            if (currentPrediction == null) {
                 continue;
             }
 
-            String status = String.valueOf(poll.get("status"));
-            if ("succeeded".equals(status)) {
-                return extractOutputUrl(poll.get("output"));
+            String status =
+                    String.valueOf(currentPrediction.get("status"));
+
+            if ("succeeded".equalsIgnoreCase(status)) {
+                String outputUrl = extractOutputUrl(
+                        currentPrediction.get("output")
+                );
+
+                if (outputUrl == null || outputUrl.isBlank()) {
+                    throw new IllegalStateException(
+                            "Replicate completed the prediction but "
+                                    + "returned no media URL."
+                    );
+                }
+
+                return outputUrl;
             }
-            if ("failed".equals(status) || "canceled".equals(status)) {
-                Object error = poll.get("error");
-                throw new IllegalStateException(error != null ? error.toString() : status);
+
+            if ("failed".equalsIgnoreCase(status)
+                    || "canceled".equalsIgnoreCase(status)) {
+
+                throwPredictionFailure(
+                        currentPrediction,
+                        status
+                );
             }
         }
-        throw new IllegalStateException("Timed out waiting for Replicate prediction.");
+
+        throw new IllegalStateException(
+                "Timed out waiting for Replicate prediction after "
+                        + attempts + " polling attempts."
+        );
     }
 
     @SuppressWarnings("unchecked")
+    private String extractPollUrl(Map<String, Object> prediction) {
+        Object urlsObject = prediction.get("urls");
+
+        if (urlsObject instanceof Map<?, ?> urls) {
+            Object getUrl = urls.get("get");
+
+            if (getUrl != null
+                    && !getUrl.toString().isBlank()
+                    && !"null".equalsIgnoreCase(getUrl.toString())) {
+
+                return getUrl.toString();
+            }
+        }
+
+        Object predictionId = prediction.get("id");
+
+        if (predictionId != null
+                && !predictionId.toString().isBlank()) {
+
+            return "https://api.replicate.com/v1/predictions/"
+                    + predictionId;
+        }
+
+        return null;
+    }
+
+    private void throwPredictionFailure(
+            Map<String, Object> prediction,
+            String status) {
+
+        Object error = prediction.get("error");
+
+        if (error != null && !error.toString().isBlank()) {
+            throw new IllegalStateException(error.toString());
+        }
+
+        throw new IllegalStateException(
+                "Replicate prediction status: " + status
+        );
+    }
+
     private String extractOutputUrl(Object output) {
         if (output == null) {
             return null;
         }
-        if (output instanceof String s) {
-            return s;
+
+        if (output instanceof String outputUrl) {
+            return outputUrl.isBlank()
+                    ? null
+                    : outputUrl;
         }
-        if (output instanceof List<?> list && !list.isEmpty()) {
-            Object first = list.get(0);
-            return first != null ? first.toString() : null;
+
+        if (output instanceof List<?> outputList) {
+            for (Object item : outputList) {
+                String outputUrl = extractOutputUrl(item);
+
+                if (outputUrl != null && !outputUrl.isBlank()) {
+                    return outputUrl;
+                }
+            }
+
+            return null;
         }
-        return output.toString();
+
+        if (output instanceof Map<?, ?> outputMap) {
+            String[] possibleUrlKeys = {
+                    "url",
+                    "video",
+                    "image",
+                    "output"
+            };
+
+            for (String key : possibleUrlKeys) {
+                Object value = outputMap.get(key);
+
+                if (value != null) {
+                    String outputUrl = extractOutputUrl(value);
+
+                    if (outputUrl != null && !outputUrl.isBlank()) {
+                        return outputUrl;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        String outputValue = output.toString();
+
+        return outputValue.isBlank()
+                ? null
+                : outputValue;
+    }
+
+    private String extractProviderError(Exception exception) {
+        if (exception instanceof HttpStatusCodeException httpException) {
+            int statusCode =
+                    httpException.getStatusCode().value();
+
+            String responseBody =
+                    httpException.getResponseBodyAsString();
+
+            if (responseBody != null && !responseBody.isBlank()) {
+                responseBody = responseBody
+                        .replace('\r', ' ')
+                        .replace('\n', ' ')
+                        .trim();
+
+                return "HTTP "
+                        + statusCode
+                        + ": "
+                        + responseBody;
+            }
+
+            return "HTTP "
+                    + statusCode
+                    + " "
+                    + httpException.getStatusText();
+        }
+
+        String message = exception.getMessage();
+
+        if (message == null || message.isBlank()) {
+            return exception.getClass().getSimpleName();
+        }
+
+        return message
+                .replace('\r', ' ')
+                .replace('\n', ' ')
+                .trim();
     }
 
     private HttpHeaders authHeaders() {
         HttpHeaders headers = new HttpHeaders();
+
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         headers.setBearerAuth(apiToken.trim());
+
         return headers;
     }
 }
