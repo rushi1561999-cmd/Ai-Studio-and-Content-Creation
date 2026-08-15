@@ -32,7 +32,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./demo/demo
-          file: ./Dockerfile
+          file: ./demo/demo/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/ai-studio-backend:latest
@@ -62,7 +62,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./dempo/frontend
-          file: ./Dockerfile
+          file: ./dempo/frontend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/ai-studio-frontend:latest
