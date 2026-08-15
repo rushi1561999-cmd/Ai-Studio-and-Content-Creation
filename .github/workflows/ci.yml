@@ -62,7 +62,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./dempo/frontend
-          file: ./dempo/frontend/Dockerfile
+          file: ./demo/frontend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/ai-studio-frontend:latest
