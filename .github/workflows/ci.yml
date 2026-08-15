@@ -1,47 +1,69 @@
-name: CI
+name: Build and Push Docker Images
 
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
+
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
+
   backend:
+    name: Build Backend Docker Image
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: demo/demo
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-          cache-dependency-path: demo/demo/pom.xml
-      - name: Test backend
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ai-studio-backend:latest
+            ghcr.io/${{ github.repository_owner }}/ai-studio-backend:${{ github.sha }}
 
   frontend:
+    name: Build Frontend Docker Image
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: demo/frontend
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: demo/frontend/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Build
-        run: npm run build
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ai-studio-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/ai-studio-frontend:${{ github.sha }}
